@@ -17,7 +17,7 @@ import {
 
 interface CitizenHomeNormalProps {
   tickets: Ticket[];
-  onNavigate: (screen: ScreenId) => void;
+  onNavigate: (screen: ScreenId, category?: Ticket['category']) => void;
   onSelectTicket: (ticketId: string) => void;
 }
 
@@ -104,29 +104,29 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
             <button
               id="snapReportBtn"
               onClick={() => onNavigate('camera_defect_capture')}
-              className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl shadow-sm transition-all flex items-center gap-2.5 cursor-pointer"
+              className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl shadow-sm transition-all flex items-center gap-2.5 cursor-pointer active:scale-95"
             >
               <Camera className="w-4 h-4" />
               <span>Snap & Report Defect</span>
             </button>
 
-            {/* enterEmergencyModeBtn: xpath: //button[@id='enterEmergencyModeBtn'] */}
+            {/* Resolved duplicate button: Distinct action to Track 5-Stage SLA without navigating to disaster */}
             <button
-              id="enterEmergencyModeBtn"
-              onClick={() => onNavigate('citizen_home_disaster')}
-              className="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-sm rounded-xl border border-red-200 transition-all flex items-center gap-2 cursor-pointer"
+              id="trackReportBtn"
+              onClick={() => onNavigate('public_ticket_stepper')}
+              className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-sm rounded-xl border border-slate-200 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
             >
-              <Flame className="w-4 h-4 text-red-600" />
-              <span>Emergency Mode</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Track 5-Stage SLA</span>
             </button>
           </div>
         </div>
 
-        {/* Quick category triggers as buttons */}
+        {/* Quick category triggers with pre-selected category routing */}
         <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3">
           <button
-            onClick={() => onNavigate('camera_defect_capture')}
-            className="p-3 text-left rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all group cursor-pointer"
+            onClick={() => onNavigate('camera_defect_capture', 'Pothole & Craters')}
+            className="p-3 text-left rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all group cursor-pointer active:scale-95"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-900 group-hover:text-blue-600">Pothole & Road Cracks</span>
@@ -136,8 +136,8 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
           </button>
 
           <button
-            onClick={() => onNavigate('camera_defect_capture')}
-            className="p-3 text-left rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all group cursor-pointer"
+            onClick={() => onNavigate('camera_defect_capture', 'Drainage Block')}
+            className="p-3 text-left rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all group cursor-pointer active:scale-95"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-900 group-hover:text-blue-600">Drainage Silt Choke</span>
@@ -147,8 +147,8 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
           </button>
 
           <button
-            onClick={() => onNavigate('camera_defect_capture')}
-            className="p-3 text-left rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all group cursor-pointer"
+            onClick={() => onNavigate('camera_defect_capture', 'Fallen Tree & Power Line')}
+            className="p-3 text-left rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all group cursor-pointer active:scale-95"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-900 group-hover:text-blue-600">Snapped Power Line</span>
@@ -159,7 +159,7 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
 
           <button
             onClick={() => onNavigate('spatial_dedup_notice')}
-            className="p-3 text-left rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all group cursor-pointer"
+            className="p-3 text-left rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all group cursor-pointer active:scale-95"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-900 group-hover:text-blue-600">50m Spatial Merge Test</span>

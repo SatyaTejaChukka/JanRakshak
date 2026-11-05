@@ -25,8 +25,8 @@ INITIAL_TICKETS: List[Dict[str, Any]] = [
             "phone": "+91 94401 23456",
             "checkedInTime": "11:15 AM (On Site)",
         },
-        "beforeImageUrl": "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=600&q=80",
-        "afterImageUrl": "https://images.unsplash.com/photo-1584463699047-9f79e39bf0b9?auto=format&fit=crop&w=600&q=80",
+        "beforeImageUrl": None,
+        "afterImageUrl": None,
     },
     {
         "id": "TKT-8904",
@@ -46,7 +46,7 @@ INITIAL_TICKETS: List[Dict[str, Any]] = [
             "phone": "+91 99890 22334",
             "checkedInTime": "08:45 AM (En Route)",
         },
-        "beforeImageUrl": "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=600&q=80",
+        "beforeImageUrl": None,
         "afterImageUrl": None,
     },
     {
@@ -61,7 +61,7 @@ INITIAL_TICKETS: List[Dict[str, Any]] = [
         "citizenPhone": "+91 98850 67890",
         "mergedCount": 2,
         "severity": "High",
-        "beforeImageUrl": "https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=600&q=80",
+        "beforeImageUrl": None,
         "afterImageUrl": None,
     },
 ]

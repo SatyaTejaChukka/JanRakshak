@@ -15,12 +15,14 @@ interface DistrictCollectorSwitcherProps {
   isDisasterMode: boolean;
   onToggleDisasterMode: (enabled: boolean) => void;
   onNavigate: (screen: ScreenId) => void;
+  onGoBack?: () => void;
 }
 
 export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps> = ({
   isDisasterMode,
   onToggleDisasterMode,
   onNavigate,
+  onGoBack,
 }) => {
   const [transitionNotice, setTransitionNotice] = useState<string | null>(null);
   const [collectorLog, setCollectorLog] = useState([
@@ -69,8 +71,8 @@ export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps>
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal'))}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors active:scale-95 cursor-pointer"
           aria-label="Back"
         >
           <ArrowLeft className="w-4 h-4" />

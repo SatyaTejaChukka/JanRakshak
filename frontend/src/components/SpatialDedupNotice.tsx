@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
 import { ScreenId, Ticket } from '../types';
 import {
   Layers,
@@ -11,6 +12,7 @@ import {
   Eye,
   ThumbsUp,
   Share2,
+  Compass,
 } from 'lucide-react';
 
 interface SpatialDedupNoticeProps {
@@ -18,6 +20,7 @@ interface SpatialDedupNoticeProps {
   onNavigate: (screen: ScreenId) => void;
   onSelectTicket: (ticketId: string) => void;
   selectedTicketId?: string;
+  onGoBack?: () => void;
 }
 
 export const SpatialDedupNotice: React.FC<SpatialDedupNoticeProps> = ({
@@ -25,6 +28,7 @@ export const SpatialDedupNotice: React.FC<SpatialDedupNoticeProps> = ({
   onNavigate,
   onSelectTicket,
   selectedTicketId,
+  onGoBack,
 }) => {
   const [upvoted, setUpvoted] = useState(false);
   const primaryTicket =
@@ -65,17 +69,95 @@ export const SpatialDedupNotice: React.FC<SpatialDedupNoticeProps> = ({
     },
   ];
 
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const center: [number, number] = [
+      primaryTicket.coordinates.latitude,
+      primaryTicket.coordinates.longitude,
+    ];
+
+    if (!mapRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        center,
+        zoom: 17,
+        zoomControl: false,
+      });
+
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors | JanRakshak Spatial GIS',
+        maxZoom: 19,
+      }).addTo(map);
+
+      // 50m Deduplication Radius Circle
+      L.circle(center, {
+        radius: 50,
+        color: '#2563eb',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.12,
+        weight: 2,
+        dashArray: '4, 4',
+      }).addTo(map);
+
+      // Master Ticket Marker
+      const masterIcon = L.divIcon({
+        className: 'bg-transparent',
+        html: `
+          <div class="relative flex items-center justify-center w-8 h-8">
+            <div class="w-6 h-6 rounded-lg bg-blue-600 text-white border-2 border-white shadow-lg flex items-center justify-center font-bold text-[10px]">
+              ⭐
+            </div>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+      L.marker(center, { icon: masterIcon })
+        .addTo(map)
+        .bindPopup(`<strong>Master Ticket: ${primaryTicket.id}</strong><br/>${primaryTicket.title}`);
+
+      // Duplicate Submission Marker (~18m offset)
+      const dupCoord: [number, number] = [center[0] + 0.00012, center[1] + 0.00012];
+      const dupIcon = L.divIcon({
+        className: 'bg-transparent',
+        html: `
+          <div class="relative flex items-center justify-center w-7 h-7">
+            <div class="w-5 h-5 rounded-full bg-amber-500 text-white border-2 border-white shadow-md flex items-center justify-center font-bold text-[9px]">
+              18m
+            </div>
+          </div>
+        `,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      });
+      L.marker(dupCoord, { icon: dupIcon })
+        .addTo(map)
+        .bindPopup(`<strong>Your Submission</strong><br/>18 meters from master ticket`);
+
+      mapRef.current = map;
+    }
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [primaryTicket.id]);
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       {/* Top Bar */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate('citizen_home_normal')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors"
-          aria-label="Back to Civic Home"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_normal'))}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors active:scale-95 cursor-pointer"
+          aria-label="Back"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Civic Portal</span>
+          <span>Go Back</span>
         </button>
         <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded">
           ALGORITHM: 50M HAVERSINE SPATIAL DEDUP
@@ -144,6 +226,22 @@ export const SpatialDedupNotice: React.FC<SpatialDedupNoticeProps> = ({
               <span className="text-slate-400 block text-[11px]">Spatial Radius</span>
               <span className="font-semibold text-slate-700 font-mono">50m Ring</span>
             </div>
+          </div>
+        </div>
+
+        {/* Real 50m Deduplication Cluster Leaflet Map */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-slate-800 flex items-center gap-1.5 font-mono">
+              <Compass className="w-3.5 h-3.5 text-blue-600" />
+              GEOSPATIAL 50-METER DEDUPLICATION CLUSTER
+            </span>
+            <span className="text-[10px] font-mono text-slate-500">
+              {primaryTicket.coordinates.latitude.toFixed(5)}, {primaryTicket.coordinates.longitude.toFixed(5)}
+            </span>
+          </div>
+          <div className="relative w-full h-56 rounded-xl overflow-hidden border border-slate-300 shadow-inner bg-slate-100">
+            <div ref={mapContainerRef} className="w-full h-full z-0" />
           </div>
         </div>
 

@@ -17,23 +17,41 @@ interface FieldWorkerCheckinProps {
   tickets: Ticket[];
   onNavigate: (screen: ScreenId) => void;
   onUpdateTicketStage: (ticketId: string, stage: Ticket['currentStage']) => void;
+  onGoBack?: () => void;
 }
 
 export const FieldWorkerCheckin: React.FC<FieldWorkerCheckinProps> = ({
   tickets,
   onNavigate,
   onUpdateTicketStage,
+  onGoBack,
 }) => {
   const [selectedTicketId, setSelectedTicketId] = useState<string>('TKT-8902');
   const [isCheckedIn, setIsCheckedIn] = useState<boolean>(true);
   const [workCompleted, setWorkCompleted] = useState<boolean>(false);
   const [materialsUsed, setMaterialsUsed] = useState<string>('Cold mix asphalt (1.2 tonnes), Emulsion tack coat, Vibratory plate compactor');
   const [completionNotes, setCompletionNotes] = useState<string>('Repaired crater depth 4ft. Compacted surface level with storm gutter drainage channel. Tested for traffic bearing.');
+  const [afterPhoto, setAfterPhoto] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const currentTicket = tickets.find((t) => t.id === selectedTicketId) || tickets[0];
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setAfterPhoto(ev.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCompleteWork = () => {
     setWorkCompleted(true);
+    if (afterPhoto && currentTicket) {
+      currentTicket.afterImageUrl = afterPhoto;
+    }
     onUpdateTicketStage(selectedTicketId, 'resolved');
   };
 
@@ -42,12 +60,12 @@ export const FieldWorkerCheckin: React.FC<FieldWorkerCheckinProps> = ({
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate('citizen_home_normal')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors"
-          aria-label="Back to Civic Home"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate('gvmc_admin_dashboard'))}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors active:scale-95 cursor-pointer"
+          aria-label="Back"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Civic Portal</span>
+          <span>Go Back</span>
         </button>
         <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded">
           GPS GEOFENCE: INSIDE 25M WORK ZONE
@@ -178,51 +196,97 @@ export const FieldWorkerCheckin: React.FC<FieldWorkerCheckinProps> = ({
             />
           </div>
 
-          {/* Before & After Dual Verification Photography */}
+          {/* Before & After Dual Verification Photography (Real Uploaded/Captured Images Only) */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-              Before & After Photo Proof (Mandatory for Stage Advancement):
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Before & After Photo Proof (Mandatory for Stage Advancement):
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                ref={fileInputRef}
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Left: Citizen's Real Before Photo */}
               <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-900 shadow-xs">
                 <div className="p-2 bg-slate-800 text-white text-[11px] font-bold flex justify-between items-center">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-amber-400"></span>
                     <span>BEFORE (Citizen Photo)</span>
                   </span>
-                  <span className="font-mono text-slate-300">12 Mins Ago</span>
+                  <span className="font-mono text-slate-300">
+                    {currentTicket.reportedAt || 'Caller Photo'}
+                  </span>
                 </div>
-                <div className="h-44 relative overflow-hidden bg-slate-950">
-                  <img
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzpcgTrpSqfyAkLxw3otG69QcGkskZFFfkIPqU2XM-yZj2BEUGQBOXom6BXUl9SoDe1AOQSN13m4-xcJmTao_Vkn1tvZlvxyM-9QVwlBYfZHDSkeEVLJFgSwH0kWALsz26gnQi9m1kw3kPhoCyQU7UgRIIhTMLqxZYC7Ki7wpPTMdPo1COQMwy4IP4Kek5Sm_snOouhp78-IVKXa8gnStPbHfhMD6bqEp5MnrxGBVJ"
-                    alt="Citizen defect capture - deep pothole"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-2 left-2 right-2 bg-black/75 backdrop-blur-xs px-2.5 py-1 rounded text-[10px] text-white font-mono flex justify-between">
-                    <span>SEV-1 DEFECT EVIDENCE</span>
-                    <span className="text-amber-300">17.7215° N, 83.3150° E</span>
-                  </div>
+                <div className="h-44 relative overflow-hidden bg-slate-950 flex items-center justify-center">
+                  {currentTicket.beforeImageUrl ? (
+                    <>
+                      <img
+                        src={currentTicket.beforeImageUrl}
+                        alt="Citizen defect capture"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-2 left-2 right-2 bg-black/75 backdrop-blur-xs px-2.5 py-1 rounded text-[10px] text-white font-mono flex justify-between">
+                        <span>CITIZEN EVIDENCE</span>
+                        <span className="text-amber-300">
+                          {currentTicket.coordinates.latitude.toFixed(4)}° N, {currentTicket.coordinates.longitude.toFixed(4)}° E
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                      <Camera className="w-8 h-8 mb-1.5 text-slate-500 opacity-60" />
+                      <span className="text-xs font-bold text-slate-300">No Photo Submitted</span>
+                      <span className="text-[10px] text-slate-500 font-mono mt-0.5">GPS Geotag Only</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="border-2 border-emerald-500 rounded-xl overflow-hidden bg-slate-900 shadow-xs">
+              {/* Right: Field Worker Real After Photo Upload */}
+              <div className={`border-2 rounded-xl overflow-hidden bg-slate-900 shadow-xs transition-colors ${afterPhoto ? 'border-emerald-500' : 'border-dashed border-slate-600'}`}>
                 <div className="p-2 bg-emerald-700 text-white text-[11px] font-bold flex justify-between items-center">
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-white" />
                     <span>AFTER (Field Worker Post-Repair Proof)</span>
                   </span>
-                  <span className="font-mono text-emerald-100">Live Timestamp</span>
+                  <span className="font-mono text-emerald-100">Live Sealed</span>
                 </div>
-                <div className="h-44 relative overflow-hidden bg-slate-950">
-                  <img
-                    src="https://images.unsplash.com/photo-1584463699047-9f79e39bf0b9?auto=format&fit=crop&w=600&q=80"
-                    alt="Field crew post-repair asphalt proof"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-2 left-2 right-2 bg-black/75 backdrop-blur-xs px-2.5 py-1 rounded text-[10px] text-white font-mono flex justify-between">
-                    <span className="text-emerald-400 font-bold">COMPACTED ASPHALT SEAL</span>
-                    <span className="text-slate-200">GEOFENCE MATCH: 12M</span>
-                  </div>
+                <div className="h-44 relative overflow-hidden bg-slate-950 flex items-center justify-center">
+                  {afterPhoto ? (
+                    <>
+                      <img
+                        src={afterPhoto}
+                        alt="Field crew post-repair asphalt proof"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-2 left-2 right-2 bg-black/75 backdrop-blur-xs px-2.5 py-1 rounded text-[10px] text-white font-mono flex justify-between items-center">
+                        <span className="text-emerald-400 font-bold">COMPACTED SEAL PROOF</span>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-[10px] text-sky-300 underline font-mono hover:text-white cursor-pointer"
+                        >
+                          Retake
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full h-full flex flex-col items-center justify-center p-4 text-center hover:bg-slate-900 transition-colors cursor-pointer group"
+                    >
+                      <Camera className="w-8 h-8 mb-1.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-white">Click to Snap / Upload After Photo</span>
+                      <span className="text-[10px] text-slate-400 font-mono mt-0.5">Required for municipal stage closure</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

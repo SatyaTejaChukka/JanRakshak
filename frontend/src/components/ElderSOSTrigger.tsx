@@ -18,9 +18,10 @@ import {
 interface ElderSOSTriggerProps {
   elderProfile: ElderProfile;
   onNavigate: (screen: ScreenId) => void;
+  onGoBack?: () => void;
 }
 
-export const ElderSOSTrigger: React.FC<ElderSOSTriggerProps> = ({ elderProfile, onNavigate }) => {
+export const ElderSOSTrigger: React.FC<ElderSOSTriggerProps> = ({ elderProfile, onNavigate, onGoBack }) => {
   const [sosTriggered, setSosTriggered] = useState(false);
   const [selectedUrgency, setSelectedUrgency] = useState<'Oxygen & Critical Care' | 'Immediate Evacuation' | 'Waterlogged Ground Floor'>('Immediate Evacuation');
   const [alertDispatched, setAlertDispatched] = useState(false);
@@ -70,12 +71,12 @@ export const ElderSOSTrigger: React.FC<ElderSOSTriggerProps> = ({ elderProfile, 
       {/* Header with back */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate('citizen_home_disaster')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors"
-          aria-label="Back to Disaster Home"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_disaster'))}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors active:scale-95 cursor-pointer"
+          aria-label="Back"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Disaster Hub</span>
+          <span>Go Back</span>
         </button>
         <span className="text-xs font-mono font-bold text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded">
           GPS LOCK: ACCURACY ±3 METERS
