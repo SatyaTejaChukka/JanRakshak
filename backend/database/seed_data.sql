@@ -192,8 +192,8 @@ VALUES
     'Critical',
     3,
     false,
-    'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=600&q=80',
-    'https://images.unsplash.com/photo-1584463699047-9f79e39bf0b9?auto=format&fit=crop&w=600&q=80'
+    NULL,
+    NULL
 ),
 (
     'a0000000-0000-0000-0000-000000000002',
@@ -209,7 +209,7 @@ VALUES
     'High',
     1,
     true,
-    'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=600&q=80',
+    NULL,
     NULL
 );
 

@@ -224,26 +224,39 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
 
       {/* Interactive Mini GIS Ward Map Canvas */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 shadow-xs">
-        <div className="relative w-full h-44 rounded-xl overflow-hidden bg-slate-900">
-          {/* Simulated Satellite/Street Map Imagery */}
-          <div
-            className="w-full h-full bg-cover bg-center opacity-85"
-            style={{
-              backgroundImage: `url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1000&q=80')`,
-            }}
-          />
+        <div className="relative w-full h-44 rounded-xl overflow-hidden bg-slate-950">
+          {/* Technical Vector GIS Grid Background */}
+          <div className="w-full h-full bg-[#0B1120] relative flex items-center justify-center">
+            {/* GIS Grid Mesh */}
+            <div className="absolute inset-0 opacity-25 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:20px_20px]" />
+            <svg className="absolute inset-0 w-full h-full opacity-30" xmlns="http://www.w3.org/2000/svg">
+              <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#38bdf8" strokeWidth="1" strokeDasharray="4 4" />
+              <line x1="50%" y1="0" x2="50%" y2="100%" stroke="#38bdf8" strokeWidth="1" strokeDasharray="4 4" />
+              <circle cx="50%" cy="50%" r="35" fill="none" stroke="#38bdf8" strokeWidth="1" opacity="0.4" />
+              <circle cx="50%" cy="50%" r="70" fill="none" stroke="#38bdf8" strokeWidth="1" strokeDasharray="3 3" opacity="0.25" />
+            </svg>
+
+            {/* Target Reticle Centered on Ticket Coordinates */}
+            <div className="relative z-10 flex flex-col items-center">
+              <span className="w-4 h-4 rounded-full bg-blue-500/30 animate-ping absolute" />
+              <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-md relative z-10" />
+              <span className="font-mono text-[10px] font-bold text-sky-300 bg-slate-950/85 px-2 py-0.5 rounded mt-1.5 border border-slate-800">
+                {ticket.coordinates.latitude.toFixed(4)}° N, {ticket.coordinates.longitude.toFixed(4)}° E
+              </span>
+            </div>
+          </div>
 
           {/* Map Overlay & Cluster Perimeter */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex flex-col justify-end p-3.5">
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex flex-col justify-end p-3.5 pointer-events-none">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-slate-900 text-xs font-semibold shadow-md">
+              <div className="flex items-center gap-2 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-slate-900 text-xs font-semibold shadow-md pointer-events-auto">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
                 <span>Cluster Perimeter: 40m Active Radius</span>
               </div>
 
               <button
                 onClick={() => onNavigate('hazard_navigation_map')}
-                className="bg-white text-blue-700 w-8 h-8 rounded-full flex items-center justify-center shadow-md hover:bg-slate-100 transition-colors cursor-pointer"
+                className="bg-white text-blue-700 w-8 h-8 rounded-full flex items-center justify-center shadow-md hover:bg-slate-100 transition-colors cursor-pointer pointer-events-auto"
                 title="Expand Full GIS Hazard Map"
                 aria-label="Expand GIS Map"
               >
@@ -314,13 +327,19 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
                 Crew checked in on-site with hydraulic chainsaws & crane tender. 11kV electrical grid isolation complete.
               </p>
 
-              {/* Micro Geo-Proof Thumbnail */}
+              {/* Micro Geo-Proof Thumbnail (Real User/Crew Image Only) */}
               <div className="flex items-center gap-3 bg-white p-2.5 rounded-lg border border-blue-200 shadow-2xs">
-                <img
-                  src="https://images.unsplash.com/photo-1584463699047-9f79e39bf0b9?auto=format&fit=crop&w=200&q=80"
-                  alt="Crew Check-in proof"
-                  className="w-12 h-12 rounded-lg object-cover shrink-0"
-                />
+                {ticket.afterImageUrl || ticket.beforeImageUrl ? (
+                  <img
+                    src={ticket.afterImageUrl || ticket.beforeImageUrl}
+                    alt="Crew Check-in proof"
+                    className="w-12 h-12 rounded-lg object-cover shrink-0 border border-slate-200"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 shrink-0">
+                    <Camera className="w-6 h-6" />
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <span className="text-xs font-bold text-blue-900 block truncate">
                     Crew Check-In Verified
@@ -368,65 +387,83 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
         </div>
       </div>
 
-      {/* Field Photo Evidence Comparison Card */}
+      {/* Field Photo Evidence Comparison Card (Real User/Crew Images Only) */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h2 className="text-sm font-bold text-slate-900">Field Photo Evidence</h2>
           <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">
-            Side-by-Side Audit
+            Real Photographic Audit
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Left: Before Work Proof */}
           <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-            <div className="relative aspect-video w-full bg-slate-900">
-              <img
-                src={
-                  ticket.beforeImageUrl ||
-                  'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=600&q=80'
-                }
-                alt="Before repair proof"
-                className="w-full h-full object-cover"
-              />
-              <span className="absolute top-2 left-2 bg-slate-950/85 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-full backdrop-blur-xs">
-                BEFORE PROOF
-              </span>
-              <span className="absolute bottom-2 left-2 bg-slate-950/85 text-white font-mono text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
-                2:45 PM
-              </span>
+            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center">
+              {ticket.beforeImageUrl ? (
+                <>
+                  <img
+                    src={ticket.beforeImageUrl}
+                    alt="Citizen defect proof"
+                    className="w-full h-full object-cover"
+                  />
+                  <span className="absolute top-2 left-2 bg-slate-950/85 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-full backdrop-blur-xs">
+                    BEFORE PROOF
+                  </span>
+                  <span className="absolute bottom-2 left-2 bg-slate-950/85 text-white font-mono text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
+                    {ticket.reportedAt}
+                  </span>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                  <Camera className="w-8 h-8 mb-1.5 text-slate-500 opacity-60" />
+                  <span className="text-xs font-bold text-slate-300">No Photo Submitted</span>
+                  <span className="text-[10px] text-slate-500 font-mono mt-0.5">GPS Geotagged coordinates only</span>
+                </div>
+              )}
             </div>
             <div className="p-3">
               <span className="text-xs font-bold text-slate-900 block truncate">
                 Citizen Defect Snapshot
               </span>
-              <span className="text-[11px] text-slate-500 block">Logged by Initial Caller</span>
+              <span className="text-[11px] text-slate-500 block">
+                {ticket.beforeImageUrl ? 'Verified User Upload' : 'Geospatial GPS Coordinate Record'}
+              </span>
             </div>
           </div>
 
           {/* Right: In-Progress / After Evidence */}
           <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-            <div className="relative aspect-video w-full bg-slate-900">
-              <img
-                src={
-                  ticket.afterImageUrl ||
-                  'https://images.unsplash.com/photo-1584463699047-9f79e39bf0b9?auto=format&fit=crop&w=600&q=80'
-                }
-                alt="In-Progress field crew proof"
-                className="w-full h-full object-cover"
-              />
-              <span className="absolute top-2 left-2 bg-blue-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-full">
-                IN-PROGRESS
-              </span>
-              <span className="absolute bottom-2 left-2 bg-slate-950/85 text-white font-mono text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
-                3:05 PM
-              </span>
+            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center">
+              {ticket.afterImageUrl ? (
+                <>
+                  <img
+                    src={ticket.afterImageUrl}
+                    alt="Field crew repair proof"
+                    className="w-full h-full object-cover"
+                  />
+                  <span className="absolute top-2 left-2 bg-emerald-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-full">
+                    AFTER REPAIR
+                  </span>
+                  <span className="absolute bottom-2 left-2 bg-slate-950/85 text-white font-mono text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
+                    Verified Resolution
+                  </span>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                  <CheckCircle2 className="w-8 h-8 mb-1.5 text-slate-500 opacity-60" />
+                  <span className="text-xs font-bold text-slate-300">Pending Repair Completion</span>
+                  <span className="text-[10px] text-slate-500 font-mono mt-0.5">After-photo uploaded upon work finish</span>
+                </div>
+              )}
             </div>
             <div className="p-3">
               <span className="text-xs font-bold text-slate-900 block truncate">
-                Trunk Sectioning & Compaction
+                Field Crew Resolution
               </span>
-              <span className="text-[11px] text-slate-500 block">Uploaded by GVMC Squad #4</span>
+              <span className="text-[11px] text-slate-500 block">
+                {ticket.afterImageUrl ? 'Sealed by GVMC Squad' : 'Crew dispatch in progress'}
+              </span>
             </div>
           </div>
         </div>

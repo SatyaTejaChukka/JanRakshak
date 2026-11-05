@@ -27,8 +27,8 @@ export const INITIAL_TICKETS: Ticket[] = [
       phone: '+91 94401 55672',
       checkedInTime: '08:42 AM Today',
     },
-    beforeImageUrl: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=600&q=80',
-    afterImageUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=600&q=80',
+    beforeImageUrl: undefined,
+    afterImageUrl: undefined,
   },
   {
     id: 'TKT-8903',

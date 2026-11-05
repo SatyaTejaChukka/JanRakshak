@@ -25,6 +25,10 @@ import {
   Crosshair,
   Edit3,
   X,
+  Upload,
+  RefreshCw,
+  Video,
+  VideoOff,
 } from 'lucide-react';
 import { checkSpatialDeduplication } from '../utils/logic';
 
@@ -85,6 +89,110 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
   const [inputLat, setInputLat] = useState('');
   const [inputLng, setInputLng] = useState('');
   const [inputWard, setInputWard] = useState('GVMC Ward 18 • Waltair');
+
+  // REAL PHOTO CAPTURE & USER MEDIA CAMERA STATE (NO DUMMY / FETCHED IMAGES)
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const mediaStreamRef = React.useRef<MediaStream | null>(null);
+
+  // Stop live media stream tracks
+  const handleStopCamera = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  // Start real browser camera with back-facing environment preference
+  const handleStartCamera = async () => {
+    setCameraError(null);
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError('Camera API not accessible in this browser. Please use the Upload / Snap Photo button.');
+        return;
+      }
+      handleStopCamera();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+      mediaStreamRef.current = stream;
+      setIsCameraActive(true);
+      setCapturedPhoto(null);
+    } catch (err: any) {
+      console.warn('getUserMedia error:', err);
+      setCameraError('Camera permission denied or camera unavailable. Please upload a real defect photo.');
+      setIsCameraActive(false);
+    }
+  };
+
+  // Bind video element when camera becomes active
+  useEffect(() => {
+    if (isCameraActive && videoRef.current && mediaStreamRef.current) {
+      videoRef.current.srcObject = mediaStreamRef.current;
+      videoRef.current.play().catch((e) => console.warn('Video play error:', e));
+    }
+  }, [isCameraActive]);
+
+  // Clean up media tracks on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+      }
+    };
+  }, []);
+
+  // Snap photo snapshot from live video element to base64 DataURL
+  const handleTakeSnapshot = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      setCapturedPhoto(dataUrl);
+      setCameraError(null);
+      handleStopCamera();
+    }
+  };
+
+  // Handle direct file input / mobile camera roll selection
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setCameraError('Please select a valid image file (JPEG, PNG, WEBP).');
+      return;
+    }
+    handleStopCamera();
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setCapturedPhoto(reader.result);
+        setCameraError(null);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRetakePhoto = () => {
+    setCapturedPhoto(null);
+    setCameraError(null);
+    handleStopCamera();
+  };
 
   // Current live timestamp
   const [currentTimeStr, setCurrentTimeStr] = useState('26 OCT 2026 • 15:42:19 IST');
@@ -283,10 +391,15 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
     },
   ];
 
-  // Handle Form Submission (STRICTLY BLOCKED IF NO LOCATION PROVIDED)
+  // Handle Form Submission (STRICTLY BLOCKED IF NO LOCATION OR PHOTO PROVIDED)
   const handleSubmitReport = () => {
     if (!coords) {
       setLocationError('Location is strictly mandatory. Please acquire GPS or enter coordinates manually.');
+      return;
+    }
+
+    if (!capturedPhoto) {
+      setCameraError('Photo evidence is strictly mandatory. Please snap or upload a defect photograph.');
       return;
     }
 
@@ -321,8 +434,7 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
           citizenPhone: '+91 98480 12345',
           mergedCount: 1,
           severity: severityMap[urgency],
-          beforeImageUrl:
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuCzpcgTrpSqfyAkLxw3otG69QcGkskZFFfkIPqU2XM-yZj2BEUGQBOXom6BXUl9SoDe1AOQSN13m4-xcJmTao_Vkn1tvZlvxyM-9QVwlBYfZHDSkeEVLJFgSwH0kWALsz26gnQi9m1kw3kPhoCyQU7UgRIIhTMLqxZYC7Ki7wpPTMdPo1COQMwy4IP4Kek5Sm_snOouhp78-IVKXa8gnStPbHfhMD6bqEp5MnrxGBVJ',
+          beforeImageUrl: capturedPhoto,
         };
 
         onAddNewTicket(newTicket);
@@ -516,14 +628,129 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
             </div>
           )}
 
+          {/* Hidden File Input for Native Camera Capture / Image Upload */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+
           {/* 4:3 Aspect Ratio Camera Reticle Viewport */}
           <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl select-none">
-            {/* Live Simulation Real Asphalt Pothole Image */}
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzpcgTrpSqfyAkLxw3otG69QcGkskZFFfkIPqU2XM-yZj2BEUGQBOXom6BXUl9SoDe1AOQSN13m4-xcJmTao_Vkn1tvZlvxyM-9QVwlBYfZHDSkeEVLJFgSwH0kWALsz26gnQi9m1kw3kPhoCyQU7UgRIIhTMLqxZYC7Ki7wpPTMdPo1COQMwy4IP4Kek5Sm_snOouhp78-IVKXa8gnStPbHfhMD6bqEp5MnrxGBVJ"
-              alt="Live street-level photograph of deep jagged asphalt pothole with waterlogging"
-              className="w-full h-full object-cover pointer-events-none"
-            />
+            {/* Viewport Content: Real Image OR Active Video Stream OR Real Camera Initializer */}
+            {capturedPhoto ? (
+              <div className="relative w-full h-full bg-slate-950 flex items-center justify-center">
+                <img
+                  src={capturedPhoto}
+                  alt="Real defect photograph captured by citizen"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleRetakePhoto}
+                    className="px-2.5 py-1.5 rounded-lg bg-black/80 hover:bg-black text-white text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 backdrop-blur-md border border-white/20 active:scale-95 transition-all cursor-pointer shadow-lg"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Retake Photo</span>
+                  </button>
+                </div>
+                <div className="absolute top-3 left-3 z-20 bg-emerald-950/90 border border-emerald-500/50 backdrop-blur-md px-2.5 py-1.5 rounded-lg text-emerald-300 font-mono text-[11px] font-bold flex items-center gap-1.5 shadow-md">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>AUTHENTIC EVIDENCE SNAPSHOT</span>
+                </div>
+              </div>
+            ) : isCameraActive ? (
+              <div className="relative w-full h-full bg-slate-950 flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleStopCamera}
+                    className="px-2.5 py-1.5 rounded-lg bg-black/80 hover:bg-black text-white text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 backdrop-blur-md border border-white/20 active:scale-95 transition-all cursor-pointer shadow-lg"
+                  >
+                    <VideoOff className="w-3.5 h-3.5 text-red-400" />
+                    <span>Stop Camera</span>
+                  </button>
+                </div>
+                <div className="absolute top-3 left-3 z-20 bg-red-950/90 border border-red-500/50 backdrop-blur-md px-2.5 py-1.5 rounded-lg text-red-300 font-mono text-[11px] font-bold flex items-center gap-1.5 shadow-md animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  <span>LIVE CAMERA FEED</span>
+                </div>
+                <div className="absolute bottom-14 inset-x-0 z-20 flex justify-center pointer-events-auto">
+                  <button
+                    type="button"
+                    onClick={handleTakeSnapshot}
+                    className="px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-2xl active:scale-95 transition-all cursor-pointer border-2 border-white"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Capture Snapshot</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="relative w-full h-full bg-[#070D18] flex flex-col items-center justify-center p-6 text-center">
+                {/* Engineering Vector Grid Background */}
+                <div
+                  className="absolute inset-0 opacity-20 pointer-events-none"
+                  style={{
+                    backgroundImage:
+                      'radial-gradient(circle at center, #38BDF8 1px, transparent 1px), linear-gradient(to right, rgba(56, 189, 248, 0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(56, 189, 248, 0.08) 1px, transparent 1px)',
+                    backgroundSize: '24px 24px',
+                  }}
+                />
+
+                <div className="relative z-10 max-w-xs flex flex-col items-center gap-3">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-950/70 border border-blue-500/40 text-blue-400 flex items-center justify-center shadow-inner">
+                    <Camera className="w-7 h-7" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-bold text-white tracking-wide">
+                      Real Defect Photo Mandatory
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                      Capture live camera proof or upload genuine photograph from your device.
+                    </p>
+                  </div>
+
+                  {cameraError && (
+                    <div className="p-2 rounded bg-amber-950/80 border border-amber-500/40 text-amber-300 text-[11px] font-mono leading-tight">
+                      {cameraError}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row items-center gap-2 w-full pt-1">
+                    <button
+                      type="button"
+                      onClick={handleStartCamera}
+                      className="w-full sm:flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      <span>Start Camera</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full sm:flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Upload / Snap</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Tactile Viewfinder Framing Reticle Corners */}
             <div className="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between">
@@ -589,27 +816,29 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
               </div>
             </div>
 
-            {/* Center Targeting Crosshairs */}
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div className="w-16 h-16 flex items-center justify-center text-white/80">
-                <svg fill="none" height="40" viewBox="0 0 36 36" width="40">
-                  <circle
-                    cx="18"
-                    cy="18"
-                    r="14"
-                    stroke="currentColor"
-                    strokeDasharray="3 3"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="M18 6V11M18 25V30M6 18H11M25 18H30"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeWidth="2"
-                  />
-                </svg>
+            {/* Center Targeting Crosshairs (visible when not already captured) */}
+            {!capturedPhoto && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="w-16 h-16 flex items-center justify-center text-white/80">
+                  <svg fill="none" height="40" viewBox="0 0 36 36" width="40">
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="14"
+                      stroke="currentColor"
+                      strokeDasharray="3 3"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d="M18 6V11M18 25V30M6 18H11M25 18H30"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="2"
+                    />
+                  </svg>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Live Stamp Overlay Watermark (Top Left) */}
             <div className="absolute top-3 left-3 bg-slate-950/85 backdrop-blur-md px-2.5 py-1.5 rounded-lg text-white shadow-md border border-slate-800">
@@ -628,9 +857,9 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
               <ShieldCheck className="w-5 h-5 text-amber-500 shrink-0" />
               <span className="text-[11px] text-slate-300 leading-tight">
                 <strong className="text-white uppercase font-bold">
-                  Live capture & Verified GPS mandatory.
+                  Real Photo & Authenticated GPS Mandatory.
                 </strong>{' '}
-                Defects cannot be processed without authenticated coordinates.
+                Defects cannot be processed without user-provided coordinates and photo.
               </span>
             </div>
           </div>
@@ -790,45 +1019,9 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
             </div>
           )}
 
-          {/* Primary Action Trigger & Shutter Snap Button (STRICTLY DISABLED IF NO LOCATION) */}
+          {/* Primary Action Trigger & Shutter Snap Button (STRICTLY DISABLED IF NO LOCATION OR NO PHOTO) */}
           <div className="pt-2 flex flex-col gap-3 w-full">
-            {coords ? (
-              <button
-                type="button"
-                disabled={isSubmitting || submitSuccess}
-                onClick={handleSubmitReport}
-                className={`w-full min-h-[54px] rounded-xl font-bold text-sm flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] transition-all cursor-pointer ${
-                  submitSuccess
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    <span>Encrypting & Caching Ticket...</span>
-                  </>
-                ) : submitSuccess ? (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 text-white" />
-                    <span>
-                      {isNearDuplicate
-                        ? 'Merged into Master Work Order'
-                        : 'Report Dispatched to GVMC'}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Camera className="w-5 h-5" />
-                    <span className="tracking-wide">
-                      {isNearDuplicate
-                        ? 'Snap Photo & Merge with Master Ticket'
-                        : 'Snap & Submit Report'}
-                    </span>
-                  </>
-                )}
-              </button>
-            ) : (
+            {!coords ? (
               <div className="space-y-2">
                 <button
                   type="button"
@@ -861,6 +1054,71 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
                   </div>
                 </div>
               </div>
+            ) : !capturedPhoto ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isCameraActive) {
+                      handleStartCamera();
+                    } else {
+                      handleTakeSnapshot();
+                    }
+                  }}
+                  className="w-full min-h-[54px] rounded-xl font-bold text-sm flex items-center justify-center gap-2.5 bg-amber-500 hover:bg-amber-600 text-white shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                >
+                  <Camera className="w-5 h-5" />
+                  <span>
+                    {isCameraActive ? 'Capture Camera Snapshot' : 'Photo Evidence Required — Snap or Upload Now'}
+                  </span>
+                </button>
+                <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+                  <span>Authentic visual proof required for inspection</span>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-blue-600 hover:text-blue-700 font-bold underline cursor-pointer"
+                  >
+                    Select File / Gallery
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isSubmitting || submitSuccess}
+                onClick={handleSubmitReport}
+                className={`w-full min-h-[54px] rounded-xl font-bold text-sm flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] transition-all cursor-pointer ${
+                  submitSuccess
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    <span>Encrypting & Caching Ticket...</span>
+                  </>
+                ) : submitSuccess ? (
+                  <>
+                    <CheckCircle2 className="w-5 h-5 text-white" />
+                    <span>
+                      {isNearDuplicate
+                        ? 'Merged into Master Work Order'
+                        : 'Report Dispatched to GVMC'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-5 h-5 text-emerald-300" />
+                    <span className="tracking-wide">
+                      {isNearDuplicate
+                        ? 'Submit Verified Evidence & Merge with Master Ticket'
+                        : 'Submit Verified Civic Report'}
+                    </span>
+                  </>
+                )}
+              </button>
             )}
 
             {/* Offline GovTech Mesh Resilience Banner */}
