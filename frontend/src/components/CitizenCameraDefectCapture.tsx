@@ -39,6 +39,7 @@ interface CitizenCameraDefectCaptureProps {
   onSelectTicket: (ticketId: string) => void;
   initialCategory?: Ticket['category'];
   onGoBack?: () => void;
+  onUpdateTicketPhoto?: (ticketId: string, photoUrl: string, type: 'before' | 'after') => void;
 }
 
 type FlashMode = 'ON' | 'AUTO' | 'OFF';
@@ -59,6 +60,7 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
   onSelectTicket,
   initialCategory,
   onGoBack,
+  onUpdateTicketPhoto,
 }) => {
   // Flash Mode State
   const [flashMode, setFlashMode] = useState<FlashMode>('ON');
@@ -420,7 +422,10 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
       setSubmitSuccess(true);
 
       if (isNearDuplicate) {
-        // Directs citizen to spatial deduplication merge notice with exact duplicate selected
+        // Consolidate citizen's photo evidence into master ticket cluster
+        if (capturedPhoto && onUpdateTicketPhoto) {
+          onUpdateTicketPhoto(duplicateId, capturedPhoto, 'before');
+        }
         onSelectTicket(duplicateId);
         setTimeout(() => {
           onNavigate('spatial_dedup_notice');

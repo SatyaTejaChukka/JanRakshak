@@ -9,7 +9,8 @@ import {
   Check,
   MapPin,
   HardHat,
-  Hub,
+  Upload,
+  RefreshCw,
   Navigation,
   ThumbsUp,
   ThumbsDown,
@@ -28,9 +29,15 @@ interface PublicTicketStepperProps {
   ticket: Ticket;
   onNavigate: (screen: ScreenId) => void;
   onGoBack?: () => void;
+  onUpdateTicketPhoto?: (ticketId: string, photoUrl: string, type: 'before' | 'after') => void;
 }
 
-export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket, onNavigate, onGoBack }) => {
+export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
+  ticket,
+  onNavigate,
+  onGoBack,
+  onUpdateTicketPhoto,
+}) => {
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
@@ -38,6 +45,70 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
   const [yesVotes, setYesVotes] = useState(14);
   const [noVotes, setNoVotes] = useState(1);
   const [isSubscribed, setIsSubscribed] = useState(false);
+
+  // Real Photo Upload and Synchronization Refs & State
+  const beforeFileInputRef = React.useRef<HTMLInputElement>(null);
+  const afterFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const getSavedPhoto = (type: 'before' | 'after') => {
+    try {
+      return localStorage.getItem(`janrakshak_photo_${type}_${ticket.id}`) || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const [beforePhoto, setBeforePhoto] = useState<string | null>(
+    ticket.beforeImageUrl || getSavedPhoto('before')
+  );
+  const [afterPhoto, setAfterPhoto] = useState<string | null>(
+    ticket.afterImageUrl || getSavedPhoto('after')
+  );
+
+  React.useEffect(() => {
+    setBeforePhoto(ticket.beforeImageUrl || getSavedPhoto('before'));
+    setAfterPhoto(ticket.afterImageUrl || getSavedPhoto('after'));
+  }, [ticket.id, ticket.beforeImageUrl, ticket.afterImageUrl]);
+
+  const handleBeforePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        const dataUrl = reader.result;
+        setBeforePhoto(dataUrl);
+        ticket.beforeImageUrl = dataUrl;
+        try {
+          localStorage.setItem(`janrakshak_photo_before_${ticket.id}`, dataUrl);
+        } catch {}
+        if (onUpdateTicketPhoto) {
+          onUpdateTicketPhoto(ticket.id, dataUrl, 'before');
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAfterPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        const dataUrl = reader.result;
+        setAfterPhoto(dataUrl);
+        ticket.afterImageUrl = dataUrl;
+        try {
+          localStorage.setItem(`janrakshak_photo_after_${ticket.id}`, dataUrl);
+        } catch {}
+        if (onUpdateTicketPhoto) {
+          onUpdateTicketPhoto(ticket.id, dataUrl, 'after');
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleToggleAlerts = () => {
     setAlertsEnabled(!alertsEnabled);
@@ -390,8 +461,29 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
 
       {/* Field Photo Evidence Comparison Card (Real User/Crew Images Only) */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+        {/* Hidden File Inputs for Interactive Photo Proof Uploads */}
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          ref={beforeFileInputRef}
+          onChange={handleBeforePhotoUpload}
+          className="hidden"
+        />
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          ref={afterFileInputRef}
+          onChange={handleAfterPhotoUpload}
+          className="hidden"
+        />
+
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-sm font-bold text-slate-900">Field Photo Evidence</h2>
+          <div className="flex items-center gap-2">
+            <Camera className="w-4 h-4 text-blue-600" />
+            <h2 className="text-sm font-bold text-slate-900">Field Photo Evidence</h2>
+          </div>
           <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">
             Real Photographic Audit
           </span>
@@ -399,12 +491,12 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Left: Before Work Proof */}
-          <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center">
-              {ticket.beforeImageUrl ? (
+          <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-2xs flex flex-col justify-between">
+            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group">
+              {beforePhoto ? (
                 <>
                   <img
-                    src={ticket.beforeImageUrl}
+                    src={beforePhoto}
                     alt="Citizen defect proof"
                     className="w-full h-full object-cover"
                   />
@@ -414,32 +506,62 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
                   <span className="absolute bottom-2 left-2 bg-slate-950/85 text-white font-mono text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
                     {ticket.reportedAt}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => beforeFileInputRef.current?.click()}
+                    className="absolute top-2 right-2 bg-black/80 hover:bg-black text-white font-mono text-[10px] px-2 py-1 rounded flex items-center gap-1 backdrop-blur-xs transition-all cursor-pointer shadow-md active:scale-95"
+                    title="Update or change defect photograph"
+                  >
+                    <RefreshCw className="w-3 h-3 text-amber-400" />
+                    <span>Update</span>
+                  </button>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center text-slate-400 p-4 text-center">
-                  <Camera className="w-8 h-8 mb-1.5 text-slate-500 opacity-60" />
+                <div className="flex flex-col items-center justify-center p-4 text-center w-full h-full bg-[#0B1120]">
+                  <Camera className="w-8 h-8 mb-2 text-slate-500 opacity-60" />
                   <span className="text-xs font-bold text-slate-300">No Photo Submitted</span>
-                  <span className="text-[10px] text-slate-500 font-mono mt-0.5">GPS Geotagged coordinates only</span>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5 mb-2.5 max-w-[210px] leading-snug">
+                    GPS Geotagged coordinates only. Upload real defect photo to expedite crew inspection.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => beforeFileInputRef.current?.click()}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload Defect Photo</span>
+                  </button>
                 </div>
               )}
             </div>
-            <div className="p-3">
-              <span className="text-xs font-bold text-slate-900 block truncate">
-                Citizen Defect Snapshot
-              </span>
-              <span className="text-[11px] text-slate-500 block">
-                {ticket.beforeImageUrl ? 'Verified User Upload' : 'Geospatial GPS Coordinate Record'}
-              </span>
+            <div className="p-3 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-900 block truncate">
+                  Citizen Defect Snapshot
+                </span>
+                <span className="text-[11px] text-slate-500 block">
+                  {beforePhoto ? 'Verified User Upload' : 'Geospatial GPS Coordinate Record'}
+                </span>
+              </div>
+              {!beforePhoto && (
+                <button
+                  type="button"
+                  onClick={() => beforeFileInputRef.current?.click()}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 underline cursor-pointer"
+                >
+                  Attach Photo
+                </button>
+              )}
             </div>
           </div>
 
           {/* Right: In-Progress / After Evidence */}
-          <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center">
-              {ticket.afterImageUrl ? (
+          <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-2xs flex flex-col justify-between">
+            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group">
+              {afterPhoto ? (
                 <>
                   <img
-                    src={ticket.afterImageUrl}
+                    src={afterPhoto}
                     alt="Field crew repair proof"
                     className="w-full h-full object-cover"
                   />
@@ -449,22 +571,52 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
                   <span className="absolute bottom-2 left-2 bg-slate-950/85 text-white font-mono text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
                     Verified Resolution
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => afterFileInputRef.current?.click()}
+                    className="absolute top-2 right-2 bg-black/80 hover:bg-black text-white font-mono text-[10px] px-2 py-1 rounded flex items-center gap-1 backdrop-blur-xs transition-all cursor-pointer shadow-md active:scale-95"
+                    title="Update repair completion photograph"
+                  >
+                    <RefreshCw className="w-3 h-3 text-amber-400" />
+                    <span>Update</span>
+                  </button>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center text-slate-400 p-4 text-center">
-                  <CheckCircle2 className="w-8 h-8 mb-1.5 text-slate-500 opacity-60" />
+                <div className="flex flex-col items-center justify-center p-4 text-center w-full h-full bg-[#0B1120]">
+                  <CheckCircle2 className="w-8 h-8 mb-2 text-slate-500 opacity-60" />
                   <span className="text-xs font-bold text-slate-300">Pending Repair Completion</span>
-                  <span className="text-[10px] text-slate-500 font-mono mt-0.5">After-photo uploaded upon work finish</span>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5 mb-2.5 max-w-[210px] leading-snug">
+                    After-photo uploaded upon work finish by municipal engineering squad.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => afterFileInputRef.current?.click()}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Attach Repair Proof</span>
+                  </button>
                 </div>
               )}
             </div>
-            <div className="p-3">
-              <span className="text-xs font-bold text-slate-900 block truncate">
-                Field Crew Resolution
-              </span>
-              <span className="text-[11px] text-slate-500 block">
-                {ticket.afterImageUrl ? 'Sealed by GVMC Squad' : 'Crew dispatch in progress'}
-              </span>
+            <div className="p-3 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-900 block truncate">
+                  Field Crew Resolution
+                </span>
+                <span className="text-[11px] text-slate-500 block">
+                  {afterPhoto ? 'Verified Resolution Evidence' : 'Crew dispatch in progress'}
+                </span>
+              </div>
+              {!afterPhoto && (
+                <button
+                  type="button"
+                  onClick={() => afterFileInputRef.current?.click()}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 underline cursor-pointer"
+                >
+                  Attach Proof
+                </button>
+              )}
             </div>
           </div>
         </div>

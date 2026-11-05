@@ -75,7 +75,21 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   
   // Data states
-  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
+  const [tickets, setTickets] = useState<Ticket[]>(() => {
+    return INITIAL_TICKETS.map((t) => {
+      try {
+        const storedBefore = localStorage.getItem(`janrakshak_photo_before_${t.id}`);
+        const storedAfter = localStorage.getItem(`janrakshak_photo_after_${t.id}`);
+        return {
+          ...t,
+          beforeImageUrl: storedBefore || t.beforeImageUrl,
+          afterImageUrl: storedAfter || t.afterImageUrl,
+        };
+      } catch {
+        return t;
+      }
+    });
+  });
   const [elderProfile, setElderProfile] = useState<ElderProfile>(INITIAL_ELDER_PROFILE);
   const [shelters, setShelters] = useState<Shelter[]>(INITIAL_SHELTERS);
   const [hazards, setHazards] = useState<HazardIncident[]>(INITIAL_HAZARDS);
@@ -94,7 +108,22 @@ export default function App() {
   useEffect(() => {
     JanRakshakAPI.getTickets()
       .then((data) => {
-        if (data && data.length > 0) setTickets(data);
+        if (data && data.length > 0) {
+          const hydrated = data.map((t) => {
+            try {
+              const storedBefore = localStorage.getItem(`janrakshak_photo_before_${t.id}`);
+              const storedAfter = localStorage.getItem(`janrakshak_photo_after_${t.id}`);
+              return {
+                ...t,
+                beforeImageUrl: storedBefore || t.beforeImageUrl,
+                afterImageUrl: storedAfter || t.afterImageUrl,
+              };
+            } catch {
+              return t;
+            }
+          });
+          setTickets(hydrated);
+        }
       })
       .catch(() => {});
 
@@ -207,8 +236,34 @@ export default function App() {
 
   const handleAddNewTicket = (newTicket: Ticket) => {
     setTickets([newTicket, ...tickets]);
+    if (newTicket.beforeImageUrl) {
+      try {
+        localStorage.setItem(`janrakshak_photo_before_${newTicket.id}`, newTicket.beforeImageUrl);
+      } catch {}
+    }
     JanRakshakAPI.createTicket(newTicket).catch(() => {});
     showToast('success', 'Ticket Dispatched to GVMC', `${newTicket.id} logged with GPS lock & photo proof.`);
+  };
+
+  const handleUpdateTicketPhoto = (ticketId: string, photoUrl: string, type: 'before' | 'after') => {
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.id === ticketId
+          ? {
+              ...t,
+              [type === 'before' ? 'beforeImageUrl' : 'afterImageUrl']: photoUrl,
+            }
+          : t
+      )
+    );
+    try {
+      localStorage.setItem(`janrakshak_photo_${type}_${ticketId}`, photoUrl);
+    } catch {}
+    showToast(
+      'success',
+      'Photo Evidence Saved',
+      `Photographic proof attached to work order ${ticketId}.`
+    );
   };
 
   const handleUpdateTicketStage = (ticketId: string, stage: Ticket['currentStage']) => {
@@ -750,6 +805,7 @@ export default function App() {
               onSelectTicket={setSelectedTicketId}
               initialCategory={activeCategoryForIntake}
               onGoBack={handleGoBack}
+              onUpdateTicketPhoto={handleUpdateTicketPhoto}
             />
           )}
 
@@ -767,6 +823,7 @@ export default function App() {
               ticket={currentSelectedTicket}
               onNavigate={handleNavigate}
               onGoBack={handleGoBack}
+              onUpdateTicketPhoto={handleUpdateTicketPhoto}
             />
           )}
 
