@@ -24,6 +24,8 @@ class ElderProfileSchema(BaseModel):
     floorLevel: str
     evacuationDifficulty: str
     proximityVolunteerCount: int = 0
+    userId: Optional[str] = None
+    citizenPhone: Optional[str] = None
 
 
 class SOSTriggerRequest(BaseModel):
@@ -31,6 +33,8 @@ class SOSTriggerRequest(BaseModel):
     triggerType: str = Field(default="ONE_TAP_PANIC", json_schema_extra={"example": "ONE_TAP_PANIC"})  # VOICE_COMMAND, ONE_TAP_PANIC, 2G_SMS
     coordinates: Optional[Coordinates] = None
     batteryPercentage: Optional[int] = Field(default=85, ge=0, le=100)
+    userId: Optional[str] = None
+    citizenPhone: Optional[str] = None
 
 
 class SOSResponse(BaseModel):
@@ -43,6 +47,8 @@ class SOSResponse(BaseModel):
     destinationShelter: Optional[str] = None
     timestamp: str
     coordinates: Optional[Coordinates] = None
+    userId: Optional[str] = None
+    citizenPhone: Optional[str] = None
 
 
 class ProximityVolunteer(BaseModel):
@@ -90,4 +96,6 @@ class SOSIncidentSchema(BaseModel):
     status: str
     timestamp: str
     coordinates: Optional[Coordinates] = None
+    userId: Optional[str] = None
+    citizenPhone: Optional[str] = None
 
