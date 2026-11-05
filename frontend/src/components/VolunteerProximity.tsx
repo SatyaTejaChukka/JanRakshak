@@ -109,8 +109,8 @@ export const VolunteerProximity: React.FC<VolunteerProximityProps> = ({
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO | JanRakshak Proximity Radar',
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors | JanRakshak Proximity Radar',
         maxZoom: 19,
       }).addTo(map);
 

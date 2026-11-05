@@ -86,8 +86,8 @@ export const SpatialDedupNotice: React.FC<SpatialDedupNoticeProps> = ({
         zoomControl: false,
       });
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO | JanRakshak Spatial GIS',
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors | JanRakshak Spatial GIS',
         maxZoom: 19,
       }).addTo(map);
 

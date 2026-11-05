@@ -139,7 +139,7 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
   const [showTicketsLayer, setShowTicketsLayer] = useState<boolean>(true);
   const [showSheltersLayer, setShowSheltersLayer] = useState<boolean>(true);
   const [showHazardsLayer, setShowHazardsLayer] = useState<boolean>(true);
-  const [mapTheme, setMapTheme] = useState<'standard' | 'dark' | 'voyager'>('voyager');
+  const [mapTheme, setMapTheme] = useState<'satellite' | 'streets' | 'topo'>('satellite');
 
   // Simulated Roadblock Injection State (User can tap map to test dynamic reroute)
   const [isAddRoadblockMode, setIsAddRoadblockMode] = useState<boolean>(false);
@@ -153,6 +153,12 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
 
   // All combined active tickets (persisted tickets + simulated user blockers)
   const activeTicketsList = [...tickets, ...simulatedBlockers];
+
+  const TILE_URLS: Record<'satellite' | 'streets' | 'topo', string> = {
+    satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    streets: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    topo: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  };
 
   // -------------------------------------------------------------
   // Map Initialization Effect
@@ -169,15 +175,9 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // Base Tile Layer
-      const tileUrls = {
-        standard: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      };
-
-      const tileLayer = L.tileLayer(tileUrls[mapTheme], {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO | JanRakshak Civic GIS',
+      // Base Tile Layer (100% Free & Unwatermarked Satellite & Street Imagery)
+      const tileLayer = L.tileLayer(TILE_URLS[mapTheme], {
+        attribution: '&copy; OpenStreetMap contributors &copy; Esri World Imagery | JanRakshak GIS',
         maxZoom: 19,
       }).addTo(map);
 
@@ -219,13 +219,8 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
     if ((map as any)._tileLayer) {
       map.removeLayer((map as any)._tileLayer);
     }
-    const tileUrls = {
-      standard: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      voyager: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    };
-    const newLayer = L.tileLayer(tileUrls[mapTheme], {
-      attribution: '&copy; OpenStreetMap contributors | JanRakshak Civic GIS',
+    const newLayer = L.tileLayer(TILE_URLS[mapTheme], {
+      attribution: '&copy; OpenStreetMap contributors &copy; Esri World Imagery | JanRakshak GIS',
       maxZoom: 19,
     }).addTo(map);
     (map as any)._tileLayer = newLayer;
@@ -789,28 +784,31 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
               {/* Map Theme Toggle */}
               <div className="bg-white/95 backdrop-blur-md p-1 rounded-xl border border-slate-200 shadow-sm flex items-center gap-1 pointer-events-auto">
                 <button
-                  onClick={() => setMapTheme('voyager')}
-                  className={`px-2 py-1 text-[11px] font-bold rounded-lg cursor-pointer ${
-                    mapTheme === 'voyager' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                  type="button"
+                  onClick={() => setMapTheme('satellite')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg cursor-pointer transition-all ${
+                    mapTheme === 'satellite' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  GovTech
+                  🛰️ Satellite
                 </button>
                 <button
-                  onClick={() => setMapTheme('standard')}
-                  className={`px-2 py-1 text-[11px] font-bold rounded-lg cursor-pointer ${
-                    mapTheme === 'standard' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                  type="button"
+                  onClick={() => setMapTheme('streets')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg cursor-pointer transition-all ${
+                    mapTheme === 'streets' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  OSM
+                  🗺️ Streets
                 </button>
                 <button
-                  onClick={() => setMapTheme('dark')}
-                  className={`px-2 py-1 text-[11px] font-bold rounded-lg cursor-pointer ${
-                    mapTheme === 'dark' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                  type="button"
+                  onClick={() => setMapTheme('topo')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg cursor-pointer transition-all ${
+                    mapTheme === 'topo' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  Tactical Dark
+                  🏔️ Topo
                 </button>
               </div>
             </div>

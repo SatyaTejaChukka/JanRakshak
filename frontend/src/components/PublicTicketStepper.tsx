@@ -66,9 +66,16 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
     ticket.afterImageUrl || getSavedPhoto('after')
   );
 
-  // Real GIS Leaflet Mini-Map Initialization
+  // Real GIS Leaflet Mini-Map Initialization (Streets & Satellite View - 100% Free & Unwatermarked)
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const [miniMapMode, setMiniMapMode] = useState<'streets' | 'satellite'>('satellite');
+
+  const TILE_URLS = {
+    streets: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  };
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -78,22 +85,23 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
     if (!mapRef.current) {
       const map = L.map(mapContainerRef.current, {
         center: [lat, lng],
-        zoom: 16,
+        zoom: 17,
         zoomControl: false,
         attributionControl: false,
       });
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      const initialTile = L.tileLayer(TILE_URLS[miniMapMode], {
         maxZoom: 19,
       }).addTo(map);
+      tileLayerRef.current = initialTile;
 
       // 40m Cluster Perimeter Circle
       L.circle([lat, lng], {
         radius: 40,
         color: '#f59e0b',
         fillColor: '#f59e0b',
-        fillOpacity: 0.18,
-        weight: 2,
+        fillOpacity: 0.22,
+        weight: 2.5,
         dashArray: '4, 4',
       }).addTo(map);
 
@@ -124,7 +132,7 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
 
       mapRef.current = map;
     } else {
-      mapRef.current.setView([lat, lng], 16);
+      mapRef.current.setView([lat, lng], 17);
     }
 
     return () => {
@@ -134,6 +142,18 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
       }
     };
   }, [ticket.id, ticket.coordinates?.latitude, ticket.coordinates?.longitude]);
+
+  // Update Mini-Map Tile Layer when Switching Streets <-> Satellite View
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (tileLayerRef.current) {
+      mapRef.current.removeLayer(tileLayerRef.current);
+    }
+    const newTile = L.tileLayer(TILE_URLS[miniMapMode], {
+      maxZoom: 19,
+    }).addTo(mapRef.current);
+    tileLayerRef.current = newTile;
+  }, [miniMapMode]);
 
   useEffect(() => {
     setBeforePhoto(ticket.beforeImageUrl || getSavedPhoto('before'));
@@ -371,10 +391,35 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
           <div ref={mapContainerRef} className="w-full h-full z-0" />
 
           {/* Map Floating Badges & Controls */}
-          <div className="absolute top-2.5 left-2.5 z-[400] flex items-center gap-2 pointer-events-none">
+          <div className="absolute top-2.5 inset-x-2.5 z-[400] flex items-center justify-between pointer-events-none">
             <span className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border border-slate-700 shadow-sm pointer-events-auto">
               {ticket.coordinates.latitude.toFixed(4)}° N, {ticket.coordinates.longitude.toFixed(4)}° E
             </span>
+
+            <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md p-0.5 rounded-lg border border-slate-200 shadow-sm pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => setMiniMapMode('satellite')}
+                className={`px-2 py-0.5 text-[10px] font-bold rounded cursor-pointer transition-all ${
+                  miniMapMode === 'satellite'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🛰️ Satellite
+              </button>
+              <button
+                type="button"
+                onClick={() => setMiniMapMode('streets')}
+                className={`px-2 py-0.5 text-[10px] font-bold rounded cursor-pointer transition-all ${
+                  miniMapMode === 'streets'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🗺️ Streets
+              </button>
+            </div>
           </div>
 
           <div className="absolute bottom-2.5 inset-x-2.5 z-[400] flex items-center justify-between pointer-events-none">
