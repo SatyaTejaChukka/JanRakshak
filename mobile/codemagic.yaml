@@ -1,0 +1,31 @@
+workflows:
+  android-workflow:
+    name: JanRakshak Android Release Build
+    max_build_duration: 30
+    instance_type: mac_mini_m1
+    environment:
+      flutter: stable
+      java: 17
+    scripts:
+      - name: Get Flutter dependencies
+        script: |
+          flutter packages pub get
+      - name: Flutter analyze
+        script: |
+          flutter analyze --no-fatal-infos
+      - name: Run unit & widget tests
+        script: |
+          flutter test
+      - name: Build Android APK
+        script: |
+          flutter build apk --release
+    artifacts:
+      - build/**/outputs/apk/**/*.apk
+      - build/**/outputs/bundle/**/*.aab
+    publishing:
+      email:
+        recipients:
+          - dev-alerts@janrakshak.gov.in
+        notify:
+          success: true
+          failure: true

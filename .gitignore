@@ -229,3 +229,16 @@ dist/
 
 # AI Studio artifacts
 .aistudio/
+
+# Flutter & Mobile artifacts
+**/mobile/.dart_tool/
+**/mobile/.flutter-plugins*
+**/mobile/build/
+**/mobile/android/local.properties
+**/.dart_tool/
+**/local.properties
+
+# Allow Flutter source files
+!mobile/lib/
+!mobile/lib/**
+!**/mobile/lib/**

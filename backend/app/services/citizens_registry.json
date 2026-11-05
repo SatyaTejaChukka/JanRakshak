@@ -34,5 +34,14 @@
     "ward": "Ward 18 (AU South Campus & Siripuram)",
     "isVerified": true,
     "registeredAt": "Verified Citizen"
+  },
+  "8179598774": {
+    "id": "USR-38648",
+    "fullName": "Bakka.Chiranjjevi",
+    "mobileNumber": "+91 8179598774",
+    "aadhaarNumber": "XXXX-XXXX-3589",
+    "ward": "Ward 14 (Madhurawada & Coastal Belt)",
+    "isVerified": true,
+    "registeredAt": "Verified Citizen"
   }
 }

@@ -1,5 +1,8 @@
 # 🛡️ JanRakshak — Dual-Mode Civic & Disaster Response Platform
 
+[![Full-Stack CI](https://github.com/SatyaTejaChukka/janrakshak/actions/workflows/full-stack-ci.yml/badge.svg)](https://github.com/SatyaTejaChukka/janrakshak/actions/workflows/full-stack-ci.yml)
+[![Flutter Mobile CI/CD](https://github.com/SatyaTejaChukka/janrakshak/actions/workflows/flutter-ci-cd.yml/badge.svg)](https://github.com/SatyaTejaChukka/janrakshak/actions/workflows/flutter-ci-cd.yml)
+[![Flutter](https://img.shields.io/badge/Flutter-3.47+-02569B?style=flat-square&logo=flutter&logoColor=white)](https://flutter.dev)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -346,6 +349,36 @@ dist/assets/index.css            80.59 kB │ gzip:  17.44 kB
 dist/assets/index.js            719.96 kB │ gzip: 186.70 kB
 ✓ built in 987ms
 ```
+
+---
+
+## 📱 Mobile Application & CI/CD Pipeline
+
+JanRakshak includes an enterprise-grade Flutter mobile application located in [mobile/](./mobile) designed for offline-first field deployment:
+
+* **Dual-Mode Architecture**: Instant toggle between Civic Care (Navy/Emerald) and Disaster Life-Safety (Crimson Alert).
+* **2×2 Emergency Calling**: Direct-dial integration for NDRF (1078), Coast Guard (1093), State Emergency Ops (1070), and GVMC Flood Desk (1800-425-0001).
+* **Live Evacuation Map**: Real-time GPS location via geolocator, OpenStreetMap tiles via lutter_map, and AI-calculated safe route polyline bypassing flooded streets and snapped 11kV cables.
+* **Aadhaar & OTP Verification**: 6-digit simulated SMS banner with one-click auto-fill and local secure persistence (SharedPreferences).
+* **Resilient API Architecture**: Auto-syncs with FastAPI backend (http://10.0.2.2:8000/api/v1) with immediate fallback to mock data when network towers fail.
+
+### ⚙️ CI/CD Pipelines (GitHub Actions & Codemagic)
+
+The repository is equipped with continuous integration and continuous deployment:
+
+1. **Mobile CI/CD Pipeline ([.github/workflows/flutter-ci-cd.yml](./.github/workflows/flutter-ci-cd.yml))**:
+   * **Lint & Analysis**: Runs lutter analyze --no-fatal-infos
+   * **Test Suite**: Runs lutter test --coverage
+   * **Android APK Build**: Builds production release (lutter build apk --release)
+   * **Artifact Delivery**: Uploads JanRakshak-Mobile-Release-APK to GitHub Actions for direct phone installation.
+
+2. **Full-Stack Monorepo CI ([.github/workflows/full-stack-ci.yml](./.github/workflows/full-stack-ci.yml))**:
+   * **Backend**: Python 3.12, FastAPI dependencies, pytest suite execution.
+   * **Frontend**: Node.js 20, TypeScript compilation check, Vite production build, logic unit tests.
+   * **Mobile**: Flutter environment initialization and widget test validation.
+
+3. **Codemagic Cloud Delivery ([mobile/codemagic.yaml](./mobile/codemagic.yaml))**:
+   * Pre-configured pipeline for automated Google Play Store internal testing and Apple TestFlight distribution.
 
 ---
 
