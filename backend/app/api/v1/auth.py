@@ -8,6 +8,8 @@ import random
 import logging
 import uuid
 import re
+import os
+import json
 from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, status
 
@@ -24,8 +26,11 @@ router = APIRouter(prefix="/auth", tags=["Aadhaar Authentication"])
 # Ephemeral in-memory session store for Aadhaar transactions (10 min TTL)
 _active_aadhaar_sessions: Dict[str, Dict[str, Any]] = {}
 
-# Persistent in-memory Citizen Registry indexed by 10-digit mobile number
-_registered_citizens: Dict[str, Dict[str, Any]] = {
+REGISTRY_FILE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "services", "citizens_registry.json"
+)
+
+DEFAULT_CITIZENS: Dict[str, Dict[str, Any]] = {
     "9848023145": {
         "id": "USR-10001",
         "fullName": "K. Satyanarayana",
@@ -54,6 +59,30 @@ _registered_citizens: Dict[str, Dict[str, Any]] = {
         "registeredAt": "Pre-verified Citizen",
     },
 }
+
+
+def _load_registry() -> Dict[str, Dict[str, Any]]:
+    try:
+        if os.path.exists(REGISTRY_FILE_PATH):
+            with open(REGISTRY_FILE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return {**DEFAULT_CITIZENS, **data}
+    except Exception as e:
+        logger.warning(f"Could not load citizens_registry.json: {e}")
+    return dict(DEFAULT_CITIZENS)
+
+
+def _save_registry(registry: Dict[str, Dict[str, Any]]) -> None:
+    try:
+        os.makedirs(os.path.dirname(REGISTRY_FILE_PATH), exist_ok=True)
+        with open(REGISTRY_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(registry, f, indent=2)
+    except Exception as e:
+        logger.warning(f"Could not persist citizens_registry.json: {e}")
+
+
+# Persistent in-memory & on-disk Citizen Registry
+_registered_citizens: Dict[str, Dict[str, Any]] = _load_registry()
 
 
 @router.get(
@@ -127,6 +156,7 @@ async def generate_aadhaar_otp(payload: AadhaarOtpRequest):
             "isVerified": True,
             "registeredAt": "Verified Citizen",
         }
+        _save_registry(_registered_citizens)
     elif existing:
         # Recognized citizen logging in with their registered mobile
         resolved_name = existing["fullName"]
@@ -144,6 +174,7 @@ async def generate_aadhaar_otp(payload: AadhaarOtpRequest):
             "isVerified": True,
             "registeredAt": "Verified Citizen",
         }
+        _save_registry(_registered_citizens)
 
     # Generate 6-digit OTP code & unique transaction client ID
     otp_code = str(random.randint(100000, 999999))
@@ -262,6 +293,7 @@ async def verify_aadhaar_otp(payload: AadhaarVerifyRequest):
     # Ensure updated profile is saved in citizen registry
     if clean_mobile:
         _registered_citizens[clean_mobile] = citizen_profile
+        _save_registry(_registered_citizens)
 
     # Clean up ephemeral session
     if client_id in _active_aadhaar_sessions:

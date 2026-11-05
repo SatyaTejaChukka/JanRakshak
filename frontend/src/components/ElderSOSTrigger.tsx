@@ -228,13 +228,10 @@ export const ElderSOSTrigger: React.FC<ElderSOSTriggerProps> = ({ elderProfile, 
                 <Users className="w-4 h-4" />
                 <span>Track Responding Volunteers On Radar</span>
               </button>
-              <button
-                onClick={() => onNavigate('ndrf_dispatcher_dashboard')}
-                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
-              >
-                <Shield className="w-4 h-4" />
-                <span>View NDRF War Room Console</span>
-              </button>
+              <div className="px-3.5 py-2.5 bg-slate-900 text-slate-200 text-xs font-mono font-medium rounded-lg flex items-center gap-2 border border-slate-800">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Live Priority Transmission Dispatched to NDRF 10th Bn War Room</span>
+              </div>
             </div>
           </div>
         )}

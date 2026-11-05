@@ -249,7 +249,64 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  // Role-Based Screen Whitelists (Strict RBAC Boundary)
+  const CITIZEN_ALLOWED_SCREENS: ScreenId[] = [
+    'citizen_home_normal',
+    'citizen_home_disaster',
+    'camera_defect_capture',
+    'public_ticket_stepper',
+    'spatial_dedup_notice',
+    'cyclone_shelter_capacity',
+    'elder_sos_trigger',
+    'volunteer_proximity',
+    'volunteer_interest_form',
+    'elder_profile_setup',
+    'hazard_navigation_map',
+  ];
+
+  const GVMC_ADMIN_ALLOWED_SCREENS: ScreenId[] = [
+    'gvmc_admin_dashboard',
+    'public_ticket_stepper',
+    'camera_defect_capture',
+    'hazard_navigation_map',
+    'field_worker_checkin',
+    'cyclone_shelter_capacity',
+    'spatial_dedup_notice',
+    'district_collector_switcher',
+  ];
+
+  const NDRF_ADMIN_ALLOWED_SCREENS: ScreenId[] = [
+    'ndrf_dispatcher_dashboard',
+    'ndrf_volunteer_hub',
+    'volunteer_proximity',
+    'cyclone_shelter_capacity',
+    'hazard_navigation_map',
+    'elder_sos_trigger',
+    'elder_profile_setup',
+    'district_collector_switcher',
+  ];
+
   const handleNavigate = (screen: ScreenId, category?: Ticket['category']) => {
+    // Strict Role-Based Access Control (RBAC) Guard
+    if (currentRole === 'CITIZEN' && !CITIZEN_ALLOWED_SCREENS.includes(screen)) {
+      showToast(
+        'alert',
+        'Restricted Official Area',
+        'Access to municipal engineering or military tactical consoles requires authorized official clearance.'
+      );
+      return;
+    }
+    if (currentRole === 'GVMC_ADMIN' && !GVMC_ADMIN_ALLOWED_SCREENS.includes(screen)) {
+      showToast('info', 'Zonal Works Scope', 'Navigating within GVMC Municipal Works jurisdiction.');
+      setCurrentScreen('gvmc_admin_dashboard');
+      return;
+    }
+    if (currentRole === 'NDRF_ADMIN' && !NDRF_ADMIN_ALLOWED_SCREENS.includes(screen)) {
+      showToast('info', 'Tactical Scope', 'Navigating within NDRF 10th Battalion War Room jurisdiction.');
+      setCurrentScreen('ndrf_dispatcher_dashboard');
+      return;
+    }
+
     if (category) {
       setActiveCategoryForIntake(category);
     }
@@ -257,19 +314,38 @@ export default function App() {
       setNavigationHistory((prev) => [...prev, currentScreen]);
     }
     setCurrentScreen(screen);
-    if (screen === 'citizen_home_disaster') {
-      setIsDisasterMode(true);
-    } else if (screen === 'citizen_home_normal') {
-      setIsDisasterMode(false);
+    if (currentRole === 'CITIZEN') {
+      if (screen === 'citizen_home_disaster') {
+        setIsDisasterMode(true);
+      } else if (screen === 'citizen_home_normal') {
+        setIsDisasterMode(false);
+      }
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleGoBack = () => {
-    if (navigationHistory.length > 0) {
-      const prev = navigationHistory[navigationHistory.length - 1];
-      setNavigationHistory((h) => h.slice(0, -1));
-      setCurrentScreen(prev);
+    const isAllowedForRole = (s: ScreenId) => {
+      if (currentRole === 'CITIZEN') return CITIZEN_ALLOWED_SCREENS.includes(s);
+      if (currentRole === 'GVMC_ADMIN') return GVMC_ADMIN_ALLOWED_SCREENS.includes(s);
+      return NDRF_ADMIN_ALLOWED_SCREENS.includes(s);
+    };
+
+    let prevScreen: ScreenId | null = null;
+    let newHistory = [...navigationHistory];
+
+    while (newHistory.length > 0) {
+      const candidate = newHistory.pop()!;
+      if (candidate !== currentScreen && isAllowedForRole(candidate)) {
+        prevScreen = candidate;
+        break;
+      }
+    }
+
+    setNavigationHistory(newHistory);
+
+    if (prevScreen) {
+      setCurrentScreen(prevScreen);
     } else {
       if (currentRole === 'GVMC_ADMIN') {
         setCurrentScreen('gvmc_admin_dashboard');
@@ -278,22 +354,6 @@ export default function App() {
       } else {
         setCurrentScreen(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal');
       }
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleSelectRole = (role: UserRole) => {
-    setCurrentRole(role);
-    setNavigationHistory([]);
-    if (role === 'GVMC_ADMIN') {
-      setCurrentScreen('gvmc_admin_dashboard');
-      showToast('info', 'Switched Persona', 'GVMC Zone 2 Municipal Works Console');
-    } else if (role === 'NDRF_ADMIN') {
-      setCurrentScreen('ndrf_dispatcher_dashboard');
-      showToast('info', 'Switched Persona', 'NDRF 10th Battalion Tactical War Room');
-    } else {
-      setCurrentScreen(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal');
-      showToast('info', 'Switched Persona', 'Citizen Public Portal');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -689,7 +749,6 @@ export default function App() {
         onNavigate={handleNavigate}
         isDisasterMode={isDisasterMode}
         currentRole={currentRole}
-        onSelectRole={handleSelectRole}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         currentUser={currentUser}
@@ -950,6 +1009,7 @@ export default function App() {
               onNavigate={handleNavigate}
               onSubmitApplication={handleSubmitVolunteerApplication}
               onGoBack={handleGoBack}
+              currentUser={currentUser}
             />
           )}
 
@@ -1034,6 +1094,7 @@ export default function App() {
               initialCategory={activeCategoryForIntake}
               onGoBack={handleGoBack}
               onUpdateTicketPhoto={handleUpdateTicketPhoto}
+              currentUser={currentUser}
             />
           )}
 

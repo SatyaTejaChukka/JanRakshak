@@ -274,13 +274,10 @@ export const CitizenHomeDisaster: React.FC<CitizenHomeDisasterProps> = ({ onNavi
             </div>
           </div>
 
-          <button
-            onClick={() => onNavigate('district_collector_switcher')}
-            className="px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition-colors w-fit cursor-pointer flex items-center gap-1.5"
-          >
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>District Collector Override</span>
-          </button>
+          <div className="px-3.5 py-1.5 text-[11px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 rounded-lg flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Active Red Alert · Disaster Mgmt Act 2005</span>
+          </div>
         </div>
 
         {/* 2 Rows and 2 Columns Helpline Grid */}

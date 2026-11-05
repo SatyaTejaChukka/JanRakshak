@@ -87,14 +87,12 @@ export const NDRFDispatcherDashboard: React.FC<NDRFDispatcherDashboardProps> = (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <button
-          onClick={() => onNavigate('citizen_home_disaster')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors w-fit"
-          aria-label="Back to Disaster Hub"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Disaster Hub</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono font-bold text-amber-400 bg-amber-950/80 border border-amber-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+            <Radio className="w-3.5 h-3.5 animate-pulse text-amber-400" />
+            <span>NDRF 10TH BATTALION TACTICAL WAR ROOM · VISAKHAPATNAM</span>
+          </span>
+        </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -108,7 +106,7 @@ export const NDRFDispatcherDashboard: React.FC<NDRFDispatcherDashboardProps> = (
             onClick={() => onNavigate('district_collector_switcher')}
             className="text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 px-3 py-2 rounded-lg border border-slate-200"
           >
-            District Collector Switcher
+            Collector Override
           </button>
           <button
             onClick={() => onNavigate('hazard_navigation_map')}

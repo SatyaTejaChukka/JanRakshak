@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScreenId, VolunteerApplication } from '../types';
+import { ScreenId, VolunteerApplication, UserProfile } from '../types';
 import {
   HeartHandshake,
   ArrowLeft,
@@ -22,6 +22,7 @@ interface VolunteerInterestFormProps {
   onNavigate: (screen: ScreenId) => void;
   onSubmitApplication: (application: VolunteerApplication) => void;
   onGoBack?: () => void;
+  currentUser?: UserProfile | null;
 }
 
 const AVAILABLE_SKILLS = [
@@ -53,12 +54,13 @@ export const VolunteerInterestForm: React.FC<VolunteerInterestFormProps> = ({
   onNavigate,
   onSubmitApplication,
   onGoBack,
+  currentUser,
 }) => {
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [fullName, setFullName] = useState(currentUser?.fullName || '');
+  const [phone, setPhone] = useState(currentUser?.mobileNumber?.replace('+91 ', '') || '');
   const [govtIdType, setGovtIdType] = useState<'Aadhaar' | 'Voter ID' | 'Driving License'>('Aadhaar');
-  const [govtIdNumber, setGovtIdNumber] = useState('');
-  const [ward, setWard] = useState('Ward 14 (Coastal Belt / Beach Road)');
+  const [govtIdNumber, setGovtIdNumber] = useState(currentUser?.aadhaarNumber || '');
+  const [ward, setWard] = useState(currentUser?.ward || 'Ward 14 (Coastal Belt / Beach Road)');
   const [address, setAddress] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>(['First Aid & CPR']);
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);

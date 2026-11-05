@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScreenId, Ticket } from '../types';
+import { ScreenId, Ticket, UserProfile } from '../types';
 import {
   Camera,
   ArrowLeft,
@@ -40,6 +40,7 @@ interface CitizenCameraDefectCaptureProps {
   initialCategory?: Ticket['category'];
   onGoBack?: () => void;
   onUpdateTicketPhoto?: (ticketId: string, photoUrl: string, type: 'before' | 'after') => void;
+  currentUser?: UserProfile | null;
 }
 
 type FlashMode = 'ON' | 'AUTO' | 'OFF';
@@ -61,6 +62,7 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
   initialCategory,
   onGoBack,
   onUpdateTicketPhoto,
+  currentUser,
 }) => {
   // Flash Mode State
   const [flashMode, setFlashMode] = useState<FlashMode>('ON');
@@ -445,8 +447,8 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
           coordinates: coords,
           reportedAt: 'Just now',
           currentStage: 'submitted',
-          citizenName: 'You (Verified Citizen)',
-          citizenPhone: '+91 98480 12345',
+          citizenName: currentUser?.fullName || 'Verified Citizen',
+          citizenPhone: currentUser?.mobileNumber || '+91 98480 12345',
           mergedCount: 1,
           severity: severityMap[urgency],
           beforeImageUrl: capturedPhoto,

@@ -259,15 +259,8 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md">
-            PUBLIC SLA TRACKER
+            PUBLIC SLA TRACKER · 4-HOUR SLA GUARANTEE
           </span>
-          <button
-            onClick={() => onNavigate('field_worker_checkin')}
-            className="text-xs font-semibold text-slate-700 hover:bg-slate-100 bg-white border border-slate-200 px-2.5 py-1 rounded-md transition-colors hidden sm:inline-flex items-center gap-1 cursor-pointer"
-          >
-            <HardHat className="w-3.5 h-3.5 text-blue-600" />
-            <span>Field Crew View</span>
-          </button>
         </div>
       </div>
 

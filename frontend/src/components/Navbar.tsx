@@ -28,7 +28,6 @@ interface NavbarProps {
   onNavigate: (screen: ScreenId) => void;
   isDisasterMode: boolean;
   currentRole: UserRole;
-  onSelectRole: (role: UserRole) => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   currentUser?: UserProfile | null;
@@ -41,7 +40,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigate,
   isDisasterMode,
   currentRole,
-  onSelectRole,
   isSidebarOpen = true,
   onToggleSidebar,
   currentUser,
@@ -321,29 +319,31 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             )}
 
-            {/* Header Mode Toggle Button */}
-            <button
-              id="headerModeToggle"
-              onClick={() => onNavigate(isDisasterMode ? 'citizen_home_normal' : 'citizen_home_disaster')}
-              className={`px-2.5 sm:px-3 py-1 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                isDisasterMode
-                  ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700'
-                  : 'bg-red-600 text-white border-red-700 hover:bg-red-700'
-              }`}
-              title="Toggle Civic Normal / Disaster Emergency Mode"
-            >
-              {isDisasterMode ? (
-                <>
-                  <Home className="w-3.5 h-3.5" />
-                  <span className="hidden xl:inline">Normal Mode</span>
-                </>
-              ) : (
-                <>
-                  <Flame className="w-3.5 h-3.5" />
-                  <span className="hidden xl:inline">Disaster Mode</span>
-                </>
-              )}
-            </button>
+            {/* Header Mode Toggle Button (Strictly for Citizens to switch Civic vs Disaster Hub) */}
+            {currentRole === 'CITIZEN' && (
+              <button
+                id="headerModeToggle"
+                onClick={() => onNavigate(isDisasterMode ? 'citizen_home_normal' : 'citizen_home_disaster')}
+                className={`px-2.5 sm:px-3 py-1 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                  isDisasterMode
+                    ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700'
+                    : 'bg-red-600 text-white border-red-700 hover:bg-red-700'
+                }`}
+                title="Toggle Civic Normal / Disaster Emergency Mode"
+              >
+                {isDisasterMode ? (
+                  <>
+                    <Home className="w-3.5 h-3.5" />
+                    <span className="hidden xl:inline">Normal Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Flame className="w-3.5 h-3.5" />
+                    <span className="hidden xl:inline">Disaster Mode</span>
+                  </>
+                )}
+              </button>
+            )}
 
             {/* Mobile menu trigger */}
             <button
@@ -438,44 +438,129 @@ export const Navbar: React.FC<NavbarProps> = ({
               Navigation
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={() => {
-                  onNavigate('citizen_home_normal');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer"
-              >
-                <Home className="w-3.5 h-3.5 text-blue-600" /> Civic Portal
-              </button>
-              <button
-                onClick={() => {
-                  onNavigate('citizen_home_disaster');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer"
-              >
-                <Flame className="w-3.5 h-3.5 text-red-600" /> Disaster Hub
-              </button>
-              <button
-                onClick={() => {
-                  onNavigate('hazard_navigation_map');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer"
-              >
-                <Compass className="w-3.5 h-3.5 text-emerald-600" /> Evacuation Route
-              </button>
-              <button
-                onClick={() => {
-                  onNavigate('elder_sos_trigger');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 text-red-700 font-bold cursor-pointer"
-              >
-                <ShieldAlert className="w-3.5 h-3.5 text-red-600" /> Elder SOS
-              </button>
-            </div>
+            {/* Role-Specific Mobile Navigation Routes */}
+            {currentRole === 'CITIZEN' && (
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => {
+                    onNavigate('citizen_home_normal');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-semibold text-slate-700"
+                >
+                  <Home className="w-3.5 h-3.5 text-blue-600" /> Civic Portal
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate('citizen_home_disaster');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-semibold text-slate-700"
+                >
+                  <Flame className="w-3.5 h-3.5 text-red-600" /> Disaster Hub
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate('hazard_navigation_map');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-semibold text-slate-700"
+                >
+                  <Compass className="w-3.5 h-3.5 text-emerald-600" /> Evacuation Route
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate('elder_sos_trigger');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 text-red-700 font-bold cursor-pointer"
+                >
+                  <AlertOctagon className="w-3.5 h-3.5 text-red-600" /> Elder SOS
+                </button>
+              </div>
+            )}
+
+            {currentRole === 'GVMC_ADMIN' && (
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => {
+                    onNavigate('gvmc_admin_dashboard');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-bold text-blue-700"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-blue-600" /> Works Console
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate('public_ticket_stepper');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-semibold text-slate-700"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> SLA Audit
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate('hazard_navigation_map');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-semibold text-slate-700"
+                >
+                  <Compass className="w-3.5 h-3.5 text-blue-600" /> Detour GIS
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate('field_worker_checkin');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-semibold text-slate-700"
+                >
+                  <HardHat className="w-3.5 h-3.5 text-amber-600" /> Field Crew
+                </button>
+              </div>
+            )}
+
+            {currentRole === 'NDRF_ADMIN' && (
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => {
+                    onNavigate('ndrf_dispatcher_dashboard');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-bold text-amber-700"
+                >
+                  <Radio className="w-3.5 h-3.5 text-amber-600" /> War Room
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate('ndrf_volunteer_hub');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-semibold text-slate-700"
+                >
+                  <Users className="w-3.5 h-3.5 text-blue-600" /> Volunteers
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate('volunteer_proximity');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-semibold text-slate-700"
+                >
+                  <HeartHandshake className="w-3.5 h-3.5 text-emerald-600" /> Radar
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate('cyclone_shelter_capacity');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-semibold text-slate-700"
+                >
+                  <LifeBuoy className="w-3.5 h-3.5 text-cyan-600" /> Shelters
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
