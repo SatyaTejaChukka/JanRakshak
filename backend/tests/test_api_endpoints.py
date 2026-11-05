@@ -133,3 +133,52 @@ def test_system_mode_toggle():
     data = res.json()
     assert data["isDisasterMode"] is True
     assert data["modeLabel"] == "DISASTER RED ALERT"
+
+
+def test_aadhaar_otp_generation_and_verification():
+    """Verify simulated UIDAI OTP generation, SMS payload, and verification."""
+    # 1. Generate OTP
+    gen_res = client.post(
+        "/api/v1/auth/aadhaar/generate-otp",
+        json={
+            "aadhaar_number": "4921 8842 1092",
+            "mobile_number": "9848012345",
+            "full_name": "K. Satyanarayana",
+            "ward": "Ward 14 (Madhurawada & Coastal Belt)",
+        },
+    )
+    assert gen_res.status_code == 200
+    gen_data = gen_res.json()
+    assert gen_data["otp_sent"] is True
+    assert gen_data["masked_aadhaar"] == "XXXX-XXXX-1092"
+    assert "UIDAI" in gen_data["simulated_sms"]
+    client_id = gen_data["client_id"]
+    debug_otp = gen_data["debug_otp"]
+
+    # 2. Verify with dynamic OTP
+    verify_res = client.post(
+        "/api/v1/auth/aadhaar/verify-otp",
+        json={
+            "client_id": client_id,
+            "otp": debug_otp,
+            "full_name": "K. Satyanarayana",
+        },
+    )
+    assert verify_res.status_code == 200
+    verify_data = verify_res.json()
+    assert verify_data["verified"] is True
+    assert verify_data["citizen"]["fullName"] == "K. Satyanarayana"
+    assert verify_data["citizen"]["isVerified"] is True
+
+    # 3. Verify universal master test code 123456 override
+    gen_res2 = client.post(
+        "/api/v1/auth/aadhaar/generate-otp",
+        json={"aadhaar_number": "8841 2091 5562", "mobile_number": "9123456789"},
+    )
+    client_id2 = gen_res2.json()["client_id"]
+    master_verify_res = client.post(
+        "/api/v1/auth/aadhaar/verify-otp",
+        json={"client_id": client_id2, "otp": "123456"},
+    )
+    assert master_verify_res.status_code == 200
+    assert master_verify_res.json()["verified"] is True

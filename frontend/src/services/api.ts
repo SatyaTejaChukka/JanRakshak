@@ -192,4 +192,74 @@ export const JanRakshakAPI = {
       body: JSON.stringify({ isDisasterMode }),
     });
   },
+
+  // --- Aadhaar OTP Authentication (Hackathon UIDAI Simulation Gateway) ---
+  async generateAadhaarOtp(payload: {
+    aadhaar_number: string;
+    mobile_number: string;
+    full_name?: string;
+    ward?: string;
+  }): Promise<{
+    client_id: string;
+    otp_sent: boolean;
+    valid_seconds: number;
+    masked_mobile: string;
+    masked_aadhaar: string;
+    simulated_sms: string;
+    debug_otp: string;
+  }> {
+    const fallbackOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const fallbackClientId = `AADH-LOCAL-${Date.now().toString().slice(-6)}`;
+    return safeFetch(
+      '/auth/aadhaar/generate-otp',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      {
+        client_id: fallbackClientId,
+        otp_sent: true,
+        valid_seconds: 600,
+        masked_mobile: `+91 XXXXX ${payload.mobile_number.slice(-4)}`,
+        masked_aadhaar: `XXXX-XXXX-${payload.aadhaar_number.replace(/\D/g, '').slice(-4)}`,
+        simulated_sms: `[UIDAI] Your Aadhaar e-KYC OTP for JanRakshak registration is ${fallbackOtp}. Valid for 10 minutes. Do not share.`,
+        debug_otp: fallbackOtp,
+      }
+    );
+  },
+
+  async verifyAadhaarOtp(payload: {
+    client_id: string;
+    otp: string;
+    full_name?: string;
+    mobile_number?: string;
+    ward?: string;
+  }): Promise<{
+    verified: boolean;
+    token: string;
+    citizen: any;
+    message: string;
+  }> {
+    return safeFetch(
+      '/auth/aadhaar/verify-otp',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      {
+        verified: true,
+        token: `session_fallback_${Date.now()}`,
+        citizen: {
+          id: `USR-${Math.floor(10000 + Math.random() * 90000)}`,
+          fullName: payload.full_name || 'K. Satyanarayana',
+          mobileNumber: `+91 ${payload.mobile_number || '9848012345'}`,
+          aadhaarNumber: 'XXXX-XXXX-1092',
+          ward: payload.ward || 'Ward 14 (Madhurawada & Coastal Belt)',
+          isVerified: true,
+          registeredAt: 'Just Now',
+        },
+        message: 'Aadhaar e-KYC demographic verification authenticated successfully.',
+      }
+    );
+  },
 };

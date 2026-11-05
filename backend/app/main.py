@@ -14,6 +14,7 @@ from backend.app.api.v1.shelters import router as shelters_router
 from backend.app.api.v1.hazards import router as hazards_router
 from backend.app.api.v1.officers import router as officers_router
 from backend.app.api.v1.system import router as system_router
+from backend.app.api.v1.auth import router as auth_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -34,6 +35,7 @@ app.add_middleware(
 
 # Register API v1 Routers
 API_V1_PREFIX = "/api/v1"
+app.include_router(auth_router, prefix=API_V1_PREFIX)
 app.include_router(tickets_router, prefix=API_V1_PREFIX)
 app.include_router(sos_router, prefix=API_V1_PREFIX)
 app.include_router(volunteers_router, prefix=API_V1_PREFIX)
