@@ -76,6 +76,7 @@ import {
   Info,
   Check,
   LogOut,
+  LocateFixed,
 } from 'lucide-react';
 
 export default function App() {

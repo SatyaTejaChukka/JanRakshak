@@ -25,6 +25,7 @@ export interface UserProfile {
   mobileNumber: string;
   aadhaarNumber: string;
   ward: string;
+  address?: string;
   isVerified: boolean;
   registeredAt: string;
 }
