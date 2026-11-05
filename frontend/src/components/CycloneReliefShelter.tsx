@@ -20,25 +20,26 @@ interface CycloneReliefShelterProps {
   shelters: Shelter[];
   onNavigate: (screen: ScreenId) => void;
   onUpdateOccupancy: (shelterId: string, delta: number) => void;
+  onGoBack?: () => void;
 }
 
 export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
   shelters,
   onNavigate,
   onUpdateOccupancy,
+  onGoBack,
 }) => {
   const [selectedShelterId, setSelectedShelterId] = useState<string>('SHL-01');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Header conforming to prototype element spec:
-          //header//button[@aria-label='Go Back'] -> Citizen Home — Disaster Emergency Mode */}
+      {/* Header with smart dynamic back navigation */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => onNavigate('citizen_home_disaster')}
+            onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_disaster'))}
             aria-label="Go Back"
-            className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 transition-colors flex items-center gap-2 cursor-pointer"
+            className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 transition-colors flex items-center gap-2 cursor-pointer active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="text-xs font-bold">Go Back</span>

@@ -17,9 +17,10 @@ import {
 interface HazardNavigationMapProps {
   hazards: HazardIncident[];
   onNavigate: (screen: ScreenId) => void;
+  onGoBack?: () => void;
 }
 
-export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({ hazards, onNavigate }) => {
+export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({ hazards, onNavigate, onGoBack }) => {
   const [selectedHazardId, setSelectedHazardId] = useState<string>('HAZ-101');
   const [avoidHazards, setAvoidHazards] = useState(true);
 
@@ -30,12 +31,12 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({ hazard
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <button
-          onClick={() => onNavigate('citizen_home_disaster')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors w-fit"
-          aria-label="Back to Disaster Hub"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_disaster'))}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors w-fit active:scale-95 cursor-pointer"
+          aria-label="Back"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Disaster Hub</span>
+          <span>Go Back</span>
         </button>
 
         <div className="flex items-center gap-2">

@@ -120,3 +120,10 @@ export interface MunicipalOfficer {
   activeWorkloadCount: number;
   status: 'On Duty' | 'On Site' | 'Off Duty';
 }
+
+export interface ToastNotification {
+  id: string;
+  type: 'success' | 'alert' | 'info';
+  title: string;
+  message: string;
+}

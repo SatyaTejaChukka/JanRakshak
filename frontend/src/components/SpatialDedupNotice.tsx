@@ -18,6 +18,7 @@ interface SpatialDedupNoticeProps {
   onNavigate: (screen: ScreenId) => void;
   onSelectTicket: (ticketId: string) => void;
   selectedTicketId?: string;
+  onGoBack?: () => void;
 }
 
 export const SpatialDedupNotice: React.FC<SpatialDedupNoticeProps> = ({
@@ -25,6 +26,7 @@ export const SpatialDedupNotice: React.FC<SpatialDedupNoticeProps> = ({
   onNavigate,
   onSelectTicket,
   selectedTicketId,
+  onGoBack,
 }) => {
   const [upvoted, setUpvoted] = useState(false);
   const primaryTicket =
@@ -70,12 +72,12 @@ export const SpatialDedupNotice: React.FC<SpatialDedupNoticeProps> = ({
       {/* Top Bar */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate('citizen_home_normal')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors"
-          aria-label="Back to Civic Home"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_normal'))}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors active:scale-95 cursor-pointer"
+          aria-label="Back"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Civic Portal</span>
+          <span>Go Back</span>
         </button>
         <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded">
           ALGORITHM: 50M HAVERSINE SPATIAL DEDUP

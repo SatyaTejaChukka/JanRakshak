@@ -18,12 +18,14 @@ interface DistrictCollectorSwitcherProps {
   isDisasterMode: boolean;
   onToggleDisasterMode: (enabled: boolean) => void;
   onNavigate: (screen: ScreenId) => void;
+  onGoBack?: () => void;
 }
 
 export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps> = ({
   isDisasterMode,
   onToggleDisasterMode,
   onNavigate,
+  onGoBack,
 }) => {
   const [officerPIN, setOfficerPIN] = useState('8891');
   const [pinEntered, setPinEntered] = useState('8891');
@@ -61,12 +63,12 @@ export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps>
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal'))}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors active:scale-95 cursor-pointer"
           aria-label="Back"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Main Hub</span>
+          <span>Go Back</span>
         </button>
 
         <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded">

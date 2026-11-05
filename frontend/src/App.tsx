@@ -14,6 +14,7 @@ import {
   VolunteerApplication,
   ActiveVolunteer,
   MunicipalOfficer,
+  ToastNotification,
 } from './types';
 import {
   INITIAL_TICKETS,
@@ -62,6 +63,9 @@ import {
   Building2,
   User,
   ShieldAlert,
+  X,
+  Info,
+  Check,
 } from 'lucide-react';
 
 export default function App() {
@@ -119,7 +123,33 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  const handleNavigate = (screen: ScreenId) => {
+  // Navigation History Stack & Intake Category State
+  const [navigationHistory, setNavigationHistory] = useState<ScreenId[]>([]);
+  const [activeCategoryForIntake, setActiveCategoryForIntake] = useState<Ticket['category'] | undefined>(undefined);
+
+  // Toast Notifications
+  const [toasts, setToasts] = useState<ToastNotification[]>([]);
+
+  const showToast = (type: 'success' | 'alert' | 'info', title: string, message: string) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const newToast: ToastNotification = { id, type, title, message };
+    setToasts((prev) => [...prev, newToast]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3800);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const handleNavigate = (screen: ScreenId, category?: Ticket['category']) => {
+    if (category) {
+      setActiveCategoryForIntake(category);
+    }
+    if (currentScreen !== screen) {
+      setNavigationHistory((prev) => [...prev, currentScreen]);
+    }
     setCurrentScreen(screen);
     if (screen === 'citizen_home_disaster') {
       setIsDisasterMode(true);
@@ -129,14 +159,35 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleGoBack = () => {
+    if (navigationHistory.length > 0) {
+      const prev = navigationHistory[navigationHistory.length - 1];
+      setNavigationHistory((h) => h.slice(0, -1));
+      setCurrentScreen(prev);
+    } else {
+      if (currentRole === 'GVMC_ADMIN') {
+        setCurrentScreen('gvmc_admin_dashboard');
+      } else if (currentRole === 'NDRF_ADMIN') {
+        setCurrentScreen('ndrf_dispatcher_dashboard');
+      } else {
+        setCurrentScreen(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal');
+      }
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSelectRole = (role: UserRole) => {
     setCurrentRole(role);
+    setNavigationHistory([]);
     if (role === 'GVMC_ADMIN') {
       setCurrentScreen('gvmc_admin_dashboard');
+      showToast('info', 'Switched Persona', 'GVMC Zone 2 Municipal Works Console');
     } else if (role === 'NDRF_ADMIN') {
       setCurrentScreen('ndrf_dispatcher_dashboard');
+      showToast('info', 'Switched Persona', 'NDRF 10th Battalion Tactical War Room');
     } else {
       setCurrentScreen(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal');
+      showToast('info', 'Switched Persona', 'Citizen Public Portal');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -144,6 +195,11 @@ export default function App() {
   const handleToggleDisasterMode = (enabled: boolean) => {
     setIsDisasterMode(enabled);
     JanRakshakAPI.toggleSystemMode(enabled).catch(() => {});
+    showToast(
+      enabled ? 'alert' : 'info',
+      enabled ? 'DISASTER RED ALERT ENGAGED' : 'NORMAL CIVIC RESTORED',
+      enabled ? 'IMD Cyclone protocol online. Coastal shelters active.' : 'Reverted to standard municipal works.'
+    );
     if (currentRole === 'CITIZEN') {
       setCurrentScreen(enabled ? 'citizen_home_disaster' : 'citizen_home_normal');
     }
@@ -152,6 +208,7 @@ export default function App() {
   const handleAddNewTicket = (newTicket: Ticket) => {
     setTickets([newTicket, ...tickets]);
     JanRakshakAPI.createTicket(newTicket).catch(() => {});
+    showToast('success', 'Ticket Dispatched to GVMC', `${newTicket.id} logged with GPS lock & photo proof.`);
   };
 
   const handleUpdateTicketStage = (ticketId: string, stage: Ticket['currentStage']) => {
@@ -159,6 +216,7 @@ export default function App() {
       prev.map((t) => (t.id === ticketId ? { ...t, currentStage: stage } : t))
     );
     JanRakshakAPI.updateTicketStage(ticketId, stage).catch(() => {});
+    showToast('info', 'Work Order Stage Updated', `Ticket ${ticketId} advanced to ${stage.replace('_', ' ')}.`);
   };
 
   const handleAssignOfficerToTicket = (ticketId: string, officer: MunicipalOfficer) => {
@@ -186,6 +244,7 @@ export default function App() {
       )
     );
     JanRakshakAPI.assignOfficer(ticketId, officer.id).catch(() => {});
+    showToast('success', 'Section Engineer Assigned', `${officer.name} assigned with 48h resolution SLA.`);
   };
 
   const handleApproveTicketResolution = (ticketId: string) => {
@@ -193,6 +252,7 @@ export default function App() {
       prev.map((t) => (t.id === ticketId ? { ...t, currentStage: 'resolved' } : t))
     );
     JanRakshakAPI.auditPhotoProof(ticketId, 'APPROVE').catch(() => {});
+    showToast('success', 'Resolution Verified', `Photo proof approved. Ticket ${ticketId} resolved.`);
   };
 
   const handleRejectTicketResolution = (ticketId: string, reason: string) => {
@@ -200,11 +260,13 @@ export default function App() {
       prev.map((t) => (t.id === ticketId ? { ...t, currentStage: 'in_progress' } : t))
     );
     JanRakshakAPI.auditPhotoProof(ticketId, 'REJECT', reason).catch(() => {});
+    showToast('alert', 'Resolution Rejected', `Audit: ${reason}. Returned to field crew.`);
   };
 
   const handleSubmitVolunteerApplication = (application: VolunteerApplication) => {
     setVolunteerApplications((prev) => [application, ...prev]);
     JanRakshakAPI.submitVolunteerApplication(application).catch(() => {});
+    showToast('success', 'Application Logged', 'Credential verification underway with NDRF 10th Bn.');
   };
 
   const handleApproveVolunteerApplication = (applicationId: string) => {
@@ -231,6 +293,7 @@ export default function App() {
 
     setActiveVolunteers((prev) => [newVolunteer, ...prev]);
     JanRakshakAPI.approveVolunteerApplication(applicationId).catch(() => {});
+    showToast('success', 'Volunteer Approved', `${app.fullName} credentialed into coastal rescue grid.`);
   };
 
   const handleRejectVolunteerApplication = (applicationId: string) => {
@@ -238,11 +301,13 @@ export default function App() {
       prev.map((a) => (a.id === applicationId ? { ...a, status: 'REJECTED' } : a))
     );
     JanRakshakAPI.rejectVolunteerApplication(applicationId).catch(() => {});
+    showToast('info', 'Application Rejected', 'Application archived.');
   };
 
   const handleAddDirectVolunteer = (volunteer: ActiveVolunteer) => {
     setActiveVolunteers((prev) => [volunteer, ...prev]);
     JanRakshakAPI.directOnboardVolunteer(volunteer).catch(() => {});
+    showToast('success', 'Direct Responder Added', `${volunteer.name} added to live command roster.`);
   };
 
   const handleUpdateVolunteerStatus = (
@@ -535,7 +600,45 @@ export default function App() {
         </aside>
 
         {/* Screen Router Viewport */}
-        <main className="flex-1 overflow-y-auto pb-12">
+        <main className="flex-1 overflow-y-auto pb-24 lg:pb-12">
+          {/* Floating GovTech Toast Alerts Container */}
+          {toasts.length > 0 && (
+            <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+              {toasts.map((t) => (
+                <div
+                  key={t.id}
+                  className={`pointer-events-auto p-3.5 rounded-xl border shadow-lg backdrop-blur-md flex items-start gap-3 transition-all animate-in slide-in-from-top-2 ${
+                    t.type === 'success'
+                      ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-100'
+                      : t.type === 'alert'
+                      ? 'bg-red-950/95 border-red-500/60 text-red-100'
+                      : 'bg-slate-900/90 border-blue-500/50 text-slate-100'
+                  }`}
+                >
+                  <div className="shrink-0 mt-0.5">
+                    {t.type === 'success' ? (
+                      <Check className="w-4 h-4 text-emerald-400" />
+                    ) : t.type === 'alert' ? (
+                      <AlertOctagon className="w-4 h-4 text-red-400 animate-pulse" />
+                    ) : (
+                      <Info className="w-4 h-4 text-sky-400" />
+                    )}
+                  </div>
+                  <div className="flex-1 text-xs">
+                    <span className="font-bold block tracking-wide">{t.title}</span>
+                    <span className="opacity-90 leading-tight block mt-0.5 text-[11px]">{t.message}</span>
+                  </div>
+                  <button
+                    onClick={() => removeToast(t.id)}
+                    className="p-1 text-slate-400 hover:text-white shrink-0 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* GVMC Admin Dashboard */}
           {currentScreen === 'gvmc_admin_dashboard' && (
             <GVMCAdminDashboard
@@ -566,6 +669,7 @@ export default function App() {
             <VolunteerInterestForm
               onNavigate={handleNavigate}
               onSubmitApplication={handleSubmitVolunteerApplication}
+              onGoBack={handleGoBack}
             />
           )}
 
@@ -583,11 +687,19 @@ export default function App() {
           )}
 
           {currentScreen === 'elder_sos_trigger' && (
-            <ElderSOSTrigger elderProfile={elderProfile} onNavigate={handleNavigate} />
+            <ElderSOSTrigger
+              elderProfile={elderProfile}
+              onNavigate={handleNavigate}
+              onGoBack={handleGoBack}
+            />
           )}
 
           {currentScreen === 'volunteer_proximity' && (
-            <VolunteerProximity elderProfile={elderProfile} onNavigate={handleNavigate} />
+            <VolunteerProximity
+              elderProfile={elderProfile}
+              onNavigate={handleNavigate}
+              onGoBack={handleGoBack}
+            />
           )}
 
           {currentScreen === 'spatial_dedup_notice' && (
@@ -596,6 +708,7 @@ export default function App() {
               onNavigate={handleNavigate}
               onSelectTicket={setSelectedTicketId}
               selectedTicketId={selectedTicketId}
+              onGoBack={handleGoBack}
             />
           )}
 
@@ -608,6 +721,7 @@ export default function App() {
               tickets={tickets}
               onNavigate={handleNavigate}
               onUpdateTicketStage={handleUpdateTicketStage}
+              onGoBack={handleGoBack}
             />
           )}
 
@@ -616,11 +730,16 @@ export default function App() {
               isDisasterMode={isDisasterMode}
               onToggleDisasterMode={handleToggleDisasterMode}
               onNavigate={handleNavigate}
+              onGoBack={handleGoBack}
             />
           )}
 
           {currentScreen === 'hazard_navigation_map' && (
-            <HazardNavigationMap hazards={hazards} onNavigate={handleNavigate} />
+            <HazardNavigationMap
+              hazards={hazards}
+              onNavigate={handleNavigate}
+              onGoBack={handleGoBack}
+            />
           )}
 
           {currentScreen === 'camera_defect_capture' && (
@@ -629,6 +748,8 @@ export default function App() {
               onNavigate={handleNavigate}
               onAddNewTicket={handleAddNewTicket}
               onSelectTicket={setSelectedTicketId}
+              initialCategory={activeCategoryForIntake}
+              onGoBack={handleGoBack}
             />
           )}
 
@@ -637,11 +758,16 @@ export default function App() {
               elderProfile={elderProfile}
               onUpdateProfile={setElderProfile}
               onNavigate={handleNavigate}
+              onGoBack={handleGoBack}
             />
           )}
 
           {currentScreen === 'public_ticket_stepper' && (
-            <PublicTicketStepper ticket={currentSelectedTicket} onNavigate={handleNavigate} />
+            <PublicTicketStepper
+              ticket={currentSelectedTicket}
+              onNavigate={handleNavigate}
+              onGoBack={handleGoBack}
+            />
           )}
 
           {currentScreen === 'cyclone_shelter_capacity' && (
@@ -649,10 +775,174 @@ export default function App() {
               shelters={shelters}
               onNavigate={handleNavigate}
               onUpdateOccupancy={handleUpdateOccupancy}
+              onGoBack={handleGoBack}
             />
           )}
         </main>
       </div>
+
+      {/* Mobile Sticky Bottom Navigation Bar (High contrast GovTech Touch Targets) */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl flex items-center justify-around py-1.5 px-1">
+        {currentRole === 'CITIZEN' && (
+          <>
+            <button
+              onClick={() => handleNavigate(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'citizen_home_normal' || currentScreen === 'citizen_home_disaster'
+                  ? 'text-blue-600 font-bold'
+                  : 'text-slate-600'
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              <span>Home</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('camera_defect_capture')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'camera_defect_capture' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <Camera className="w-4 h-4" />
+              <span>Report</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('public_ticket_stepper')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'public_ticket_stepper' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Track SLA</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('cyclone_shelter_capacity')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'cyclone_shelter_capacity' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <LifeBuoy className="w-4 h-4" />
+              <span>Shelters</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('elder_sos_trigger')}
+              className="flex flex-col items-center gap-0.5 text-[10px] font-bold py-1 px-2.5 rounded-lg text-red-600 bg-red-50 border border-red-200 active:scale-95 transition-transform cursor-pointer"
+            >
+              <AlertOctagon className="w-4 h-4 text-red-600 animate-pulse" />
+              <span>SOS Alert</span>
+            </button>
+          </>
+        )}
+
+        {currentRole === 'GVMC_ADMIN' && (
+          <>
+            <button
+              onClick={() => handleNavigate('gvmc_admin_dashboard')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'gvmc_admin_dashboard' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Console</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('spatial_dedup_notice')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'spatial_dedup_notice' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>50m Dedupe</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('field_worker_checkin')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'field_worker_checkin' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <HardHat className="w-4 h-4" />
+              <span>Field Crew</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('hazard_navigation_map')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'hazard_navigation_map' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <Compass className="w-4 h-4" />
+              <span>Detour GIS</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('public_ticket_stepper')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'public_ticket_stepper' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>SLA Audit</span>
+            </button>
+          </>
+        )}
+
+        {currentRole === 'NDRF_ADMIN' && (
+          <>
+            <button
+              onClick={() => handleNavigate('ndrf_dispatcher_dashboard')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'ndrf_dispatcher_dashboard' ? 'text-amber-700 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <Radio className="w-4 h-4" />
+              <span>War Room</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('ndrf_volunteer_hub')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'ndrf_volunteer_hub' ? 'text-amber-700 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Volunteers</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('volunteer_proximity')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'volunteer_proximity' ? 'text-amber-700 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <HeartHandshake className="w-4 h-4" />
+              <span>Radar</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('cyclone_shelter_capacity')}
+              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                currentScreen === 'cyclone_shelter_capacity' ? 'text-amber-700 font-bold' : 'text-slate-600'
+              }`}
+            >
+              <LifeBuoy className="w-4 h-4" />
+              <span>Shelters</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('elder_sos_trigger')}
+              className="flex flex-col items-center gap-0.5 text-[10px] font-bold py-1 px-2.5 rounded-lg text-red-600 bg-red-50 border border-red-200 active:scale-95 transition-transform cursor-pointer"
+            >
+              <AlertOctagon className="w-4 h-4 text-red-600 animate-pulse" />
+              <span>SOS Alert</span>
+            </button>
+          </>
+        )}
+      </nav>
     </div>
   );
 }

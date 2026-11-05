@@ -37,6 +37,8 @@ interface CitizenCameraDefectCaptureProps {
   onNavigate: (screen: ScreenId) => void;
   onAddNewTicket: (newTicket: Ticket) => void;
   onSelectTicket: (ticketId: string) => void;
+  initialCategory?: Ticket['category'];
+  onGoBack?: () => void;
 }
 
 type FlashMode = 'ON' | 'AUTO' | 'OFF';
@@ -55,12 +57,20 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
   onNavigate,
   onAddNewTicket,
   onSelectTicket,
+  initialCategory,
+  onGoBack,
 }) => {
   // Flash Mode State
   const [flashMode, setFlashMode] = useState<FlashMode>('ON');
 
-  // Issue Category State
-  const [category, setCategory] = useState<Ticket['category']>('Pothole & Craters');
+  // Issue Category State (initialized from props if triggered from category card)
+  const [category, setCategory] = useState<Ticket['category']>(initialCategory || 'Pothole & Craters');
+
+  useEffect(() => {
+    if (initialCategory) {
+      setCategory(initialCategory);
+    }
+  }, [initialCategory]);
 
   // Landmark & Description State
   const [landmark, setLandmark] = useState('');
@@ -454,7 +464,7 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
         <div className="max-w-4xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => onNavigate('citizen_home_normal')}
+              onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_normal'))}
               aria-label="Back to Operations"
               className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 active:scale-95 transition-all cursor-pointer border border-slate-200/80"
             >

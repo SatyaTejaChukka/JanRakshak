@@ -27,9 +27,10 @@ import {
 interface PublicTicketStepperProps {
   ticket: Ticket;
   onNavigate: (screen: ScreenId) => void;
+  onGoBack?: () => void;
 }
 
-export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket, onNavigate }) => {
+export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket, onNavigate, onGoBack }) => {
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
@@ -88,11 +89,11 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
       {/* Top Header Bar */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate('citizen_home_normal')}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs transition-colors cursor-pointer"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_normal'))}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs transition-colors active:scale-95 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Civic Portal</span>
+          <span>Go Back</span>
         </button>
 
         <div className="flex items-center gap-2">

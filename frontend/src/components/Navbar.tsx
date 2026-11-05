@@ -20,6 +20,8 @@ import {
   Users,
   Layers,
   HeartHandshake,
+  AlertOctagon,
+  ChevronRight,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -42,6 +44,48 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleSidebar,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [showNotifications, setShowNotifications] = React.useState(false);
+
+  const getScreenMeta = (screen: ScreenId) => {
+    switch (screen) {
+      case 'citizen_home_normal':
+        return { section: 'Civic Governance', title: 'Citizen Portal & Defect Feed' };
+      case 'citizen_home_disaster':
+        return { section: 'Emergency Response', title: 'Cyclone Montha Disaster Hub' };
+      case 'gvmc_admin_dashboard':
+        return { section: 'GVMC Zone 2 Works', title: 'Admin Command Console' };
+      case 'ndrf_dispatcher_dashboard':
+        return { section: 'NDRF 10th Battalion', title: 'Tactical War Room' };
+      case 'camera_defect_capture':
+        return { section: 'Civic Defect Intake', title: 'Camera & RTK Geotagging' };
+      case 'public_ticket_stepper':
+        return { section: 'Transparency Audit', title: '5-Stage Public SLA Stepper' };
+      case 'spatial_dedup_notice':
+        return { section: 'Geospatial Intelligence', title: '50m PostGIS Cluster Radar' };
+      case 'cyclone_shelter_capacity':
+        return { section: 'Evacuation Logistics', title: 'Relief Shelter Capacities' };
+      case 'elder_sos_trigger':
+        return { section: 'Life Safety Priority', title: 'Emergency Elder SOS Dispatch' };
+      case 'volunteer_proximity':
+        return { section: 'Community Mobilization', title: '500m Volunteer Proximity Radar' };
+      case 'volunteer_interest_form':
+        return { section: 'Civilian Corps', title: 'Disaster Volunteer Registration' };
+      case 'ndrf_volunteer_hub':
+        return { section: 'NDRF Command', title: 'Volunteer Force Management' };
+      case 'field_worker_checkin':
+        return { section: 'Municipal Field Crew', title: 'Geofenced Check-In & Proof' };
+      case 'hazard_navigation_map':
+        return { section: 'Safe Evacuation GIS', title: 'Dynamic Hazard Avoidance' };
+      case 'district_collector_switcher':
+        return { section: 'District Magistracy', title: 'Executive Mode Override' };
+      case 'elder_profile_setup':
+        return { section: 'Vulnerability Registry', title: 'Elder & Medical Profile' };
+      default:
+        return { section: 'JanRakshak', title: 'Operations Dashboard' };
+    }
+  };
+
+  const screenMeta = getScreenMeta(currentScreen);
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -96,146 +140,118 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Center Zone: Role-Specific Desktop Quick Navigation */}
-          <nav className="hidden lg:flex items-center gap-4 text-xs font-semibold text-slate-600">
-            {currentRole === 'CITIZEN' && (
-              <>
-                <button
-                  onClick={() => onNavigate('citizen_home_normal')}
-                  className={`hover:text-blue-600 transition-colors cursor-pointer ${
-                    currentScreen === 'citizen_home_normal'
-                      ? 'text-blue-600 font-bold underline underline-offset-4'
-                      : ''
+          {/* Center Zone: Active Workspace Context Breadcrumb (Eliminates redundant desktop navigation buttons) */}
+          <div className="hidden lg:flex items-center gap-3">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400">
+                <span className="uppercase tracking-wider">{screenMeta.section}</span>
+                <ChevronRight className="w-3 h-3 text-slate-400" />
+                <span className="text-slate-600 font-semibold">{screenMeta.title}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-extrabold text-slate-900 tracking-tight">
+                  {screenMeta.title}
+                </span>
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    isDisasterMode ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'
                   }`}
-                >
-                  Civic Portal
-                </button>
-                <button
-                  onClick={() => onNavigate('citizen_home_disaster')}
-                  className={`hover:text-red-600 transition-colors cursor-pointer ${
-                    currentScreen === 'citizen_home_disaster'
-                      ? 'text-red-600 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  Disaster Hub
-                </button>
-                <button
-                  onClick={() => onNavigate('volunteer_interest_form')}
-                  className={`hover:text-blue-600 transition-colors cursor-pointer ${
-                    currentScreen === 'volunteer_interest_form'
-                      ? 'text-blue-600 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  Join Volunteers
-                </button>
-                <button
-                  onClick={() => onNavigate('cyclone_shelter_capacity')}
-                  className={`hover:text-slate-900 transition-colors cursor-pointer ${
-                    currentScreen === 'cyclone_shelter_capacity'
-                      ? 'text-slate-900 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  Shelters
-                </button>
-              </>
-            )}
+                  title={isDisasterMode ? 'Disaster Red Alert Active' : 'Normal Civic Operations'}
+                />
+              </div>
+            </div>
+          </div>
 
-            {currentRole === 'GVMC_ADMIN' && (
-              <>
-                <button
-                  onClick={() => onNavigate('gvmc_admin_dashboard')}
-                  className={`hover:text-blue-600 transition-colors cursor-pointer ${
-                    currentScreen === 'gvmc_admin_dashboard'
-                      ? 'text-blue-600 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  GVMC Works Console
-                </button>
-                <button
-                  onClick={() => onNavigate('spatial_dedup_notice')}
-                  className={`hover:text-blue-600 transition-colors cursor-pointer ${
-                    currentScreen === 'spatial_dedup_notice'
-                      ? 'text-blue-600 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  50m Dedupe Radar
-                </button>
-                <button
-                  onClick={() => onNavigate('field_worker_checkin')}
-                  className={`hover:text-slate-900 transition-colors cursor-pointer ${
-                    currentScreen === 'field_worker_checkin'
-                      ? 'text-slate-900 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  Crew Field Check-In
-                </button>
-                <button
-                  onClick={() => onNavigate('hazard_navigation_map')}
-                  className={`hover:text-slate-900 transition-colors cursor-pointer ${
-                    currentScreen === 'hazard_navigation_map'
-                      ? 'text-slate-900 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  Hazard GIS Map
-                </button>
-              </>
-            )}
-
-            {currentRole === 'NDRF_ADMIN' && (
-              <>
-                <button
-                  onClick={() => onNavigate('ndrf_dispatcher_dashboard')}
-                  className={`hover:text-amber-700 transition-colors cursor-pointer ${
-                    currentScreen === 'ndrf_dispatcher_dashboard'
-                      ? 'text-amber-700 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  NDRF War Room
-                </button>
-                <button
-                  onClick={() => onNavigate('ndrf_volunteer_hub')}
-                  className={`hover:text-amber-700 transition-colors cursor-pointer ${
-                    currentScreen === 'ndrf_volunteer_hub'
-                      ? 'text-amber-700 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  Volunteer Command Hub
-                </button>
-                <button
-                  onClick={() => onNavigate('volunteer_proximity')}
-                  className={`hover:text-slate-900 transition-colors cursor-pointer ${
-                    currentScreen === 'volunteer_proximity'
-                      ? 'text-slate-900 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  Rescue Radar
-                </button>
-                <button
-                  onClick={() => onNavigate('cyclone_shelter_capacity')}
-                  className={`hover:text-slate-900 transition-colors cursor-pointer ${
-                    currentScreen === 'cyclone_shelter_capacity'
-                      ? 'text-slate-900 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  Shelter Occupancy
-                </button>
-              </>
-            )}
-          </nav>
-
-          {/* Right Zone: RBAC Role Selector + Mode Switcher + Mobile Trigger */}
+          {/* Right Zone: RBAC Role Selector + Notifications + SOS Quick Pill + Mode Switcher */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Quick Emergency SOS Button in Header */}
+            {currentRole === 'CITIZEN' && (
+              <button
+                type="button"
+                onClick={() => onNavigate('elder_sos_trigger')}
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow-xs active:scale-95 transition-all cursor-pointer"
+                title="Trigger Emergency Elder SOS"
+              >
+                <AlertOctagon className="w-3.5 h-3.5 animate-pulse text-yellow-300" />
+                <span>Emergency SOS</span>
+              </button>
+            )}
+
+            {/* Notifications Advisory Bell with Popover */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer border ${
+                  showNotifications
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+                title="System Advisories & Alerts"
+                aria-label="View system notifications"
+              >
+                <Bell className="w-4 h-4" />
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+              </button>
+
+              {/* Notification Popover Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
+                      Civic & Disaster Advisories
+                    </span>
+                    <button
+                      onClick={() => setShowNotifications(false)}
+                      className="text-xs text-slate-400 hover:text-slate-600 font-mono"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-900 space-y-1">
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1">
+                          <Flame className="w-3.5 h-3.5 text-red-600" />
+                          <span>IMD Cyclone Alert</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-red-600">LIVE</span>
+                      </div>
+                      <p className="text-[11px] text-red-800 leading-snug">
+                        Severe Cyclone Montha landfall in 4h. 18 cyclone shelters operational with diesel generators.
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 space-y-1">
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1">
+                          <Layers className="w-3.5 h-3.5 text-blue-600" />
+                          <span>50m Deduplication Active</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-blue-600">PostGIS</span>
+                      </div>
+                      <p className="text-[11px] text-blue-800 leading-snug">
+                        Spatial radius ST_DWithin clustering duplicate reports on RK Beach road.
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1">
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1">
+                          <HeartHandshake className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Volunteer Corps</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-emerald-600">Mobilized</span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800 leading-snug">
+                        Community First Responders deployed for coastal evacuation sweeps.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             {/* RBAC Role Selector Pill */}
             <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold">
               <button
