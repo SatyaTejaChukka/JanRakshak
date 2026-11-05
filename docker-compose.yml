@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: janrakshak_postgis
+    restart: always
+    environment:
+      POSTGRES_DB: janrakshak_db
+      POSTGRES_USER: janrakshak_user
+      POSTGRES_PASSWORD: janrakshak_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./backend/database/seed_data.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U janrakshak_user -d janrakshak_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgis_data:
+    driver: local
