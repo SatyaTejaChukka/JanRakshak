@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
 import { ScreenId, Ticket } from '../types';
 import {
   ArrowLeft,
@@ -65,7 +66,76 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
     ticket.afterImageUrl || getSavedPhoto('after')
   );
 
-  React.useEffect(() => {
+  // Real GIS Leaflet Mini-Map Initialization
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const lat = ticket.coordinates?.latitude || 17.7126;
+    const lng = ticket.coordinates?.longitude || 83.3218;
+
+    if (!mapRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        center: [lat, lng],
+        zoom: 16,
+        zoomControl: false,
+        attributionControl: false,
+      });
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+
+      // 40m Cluster Perimeter Circle
+      L.circle([lat, lng], {
+        radius: 40,
+        color: '#f59e0b',
+        fillColor: '#f59e0b',
+        fillOpacity: 0.18,
+        weight: 2,
+        dashArray: '4, 4',
+      }).addTo(map);
+
+      // Geotagged Defect Beacon
+      const ticketIcon = L.divIcon({
+        className: 'bg-transparent',
+        html: `
+          <div class="relative flex items-center justify-center w-8 h-8">
+            <div class="absolute w-8 h-8 rounded-full bg-blue-500/35 animate-ping"></div>
+            <div class="relative w-6 h-6 rounded-full bg-blue-600 border-2 border-white shadow-xl flex items-center justify-center text-white font-bold text-[9px]">
+              📍
+            </div>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+
+      L.marker([lat, lng], { icon: ticketIcon })
+        .addTo(map)
+        .bindPopup(`
+          <div class="p-1 text-slate-900 font-sans text-xs">
+            <strong>${ticket.id}</strong><br/>
+            <span>${ticket.title}</span><br/>
+            <span class="text-[11px] text-slate-500">${ticket.location}</span>
+          </div>
+        `);
+
+      mapRef.current = map;
+    } else {
+      mapRef.current.setView([lat, lng], 16);
+    }
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [ticket.id, ticket.coordinates?.latitude, ticket.coordinates?.longitude]);
+
+  useEffect(() => {
     setBeforePhoto(ticket.beforeImageUrl || getSavedPhoto('before'));
     setAfterPhoto(ticket.afterImageUrl || getSavedPhoto('after'));
   }, [ticket.id, ticket.beforeImageUrl, ticket.afterImageUrl]);
@@ -294,47 +364,33 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
         </div>
       </div>
 
-      {/* Interactive Mini GIS Ward Map Canvas */}
+      {/* Real Interactive Mini GIS Ward Map Canvas */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 shadow-xs">
-        <div className="relative w-full h-44 rounded-xl overflow-hidden bg-slate-950">
-          {/* Technical Vector GIS Grid Background */}
-          <div className="w-full h-full bg-[#0B1120] relative flex items-center justify-center">
-            {/* GIS Grid Mesh */}
-            <div className="absolute inset-0 opacity-25 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:20px_20px]" />
-            <svg className="absolute inset-0 w-full h-full opacity-30" xmlns="http://www.w3.org/2000/svg">
-              <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#38bdf8" strokeWidth="1" strokeDasharray="4 4" />
-              <line x1="50%" y1="0" x2="50%" y2="100%" stroke="#38bdf8" strokeWidth="1" strokeDasharray="4 4" />
-              <circle cx="50%" cy="50%" r="35" fill="none" stroke="#38bdf8" strokeWidth="1" opacity="0.4" />
-              <circle cx="50%" cy="50%" r="70" fill="none" stroke="#38bdf8" strokeWidth="1" strokeDasharray="3 3" opacity="0.25" />
-            </svg>
+        <div className="relative w-full h-48 sm:h-52 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+          {/* Leaflet Real Map Viewport */}
+          <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-            {/* Target Reticle Centered on Ticket Coordinates */}
-            <div className="relative z-10 flex flex-col items-center">
-              <span className="w-4 h-4 rounded-full bg-blue-500/30 animate-ping absolute" />
-              <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-md relative z-10" />
-              <span className="font-mono text-[10px] font-bold text-sky-300 bg-slate-950/85 px-2 py-0.5 rounded mt-1.5 border border-slate-800">
-                {ticket.coordinates.latitude.toFixed(4)}° N, {ticket.coordinates.longitude.toFixed(4)}° E
-              </span>
-            </div>
+          {/* Map Floating Badges & Controls */}
+          <div className="absolute top-2.5 left-2.5 z-[400] flex items-center gap-2 pointer-events-none">
+            <span className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border border-slate-700 shadow-sm pointer-events-auto">
+              {ticket.coordinates.latitude.toFixed(4)}° N, {ticket.coordinates.longitude.toFixed(4)}° E
+            </span>
           </div>
 
-          {/* Map Overlay & Cluster Perimeter */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex flex-col justify-end p-3.5 pointer-events-none">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-slate-900 text-xs font-semibold shadow-md pointer-events-auto">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                <span>Cluster Perimeter: 40m Active Radius</span>
-              </div>
-
-              <button
-                onClick={() => onNavigate('hazard_navigation_map')}
-                className="bg-white text-blue-700 w-8 h-8 rounded-full flex items-center justify-center shadow-md hover:bg-slate-100 transition-colors cursor-pointer pointer-events-auto"
-                title="Expand Full GIS Hazard Map"
-                aria-label="Expand GIS Map"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
+          <div className="absolute bottom-2.5 inset-x-2.5 z-[400] flex items-center justify-between pointer-events-none">
+            <div className="flex items-center gap-2 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-slate-900 text-xs font-semibold shadow-md pointer-events-auto border border-slate-200">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+              <span>Cluster Perimeter: 40m Active Radius</span>
             </div>
+
+            <button
+              onClick={() => onNavigate('hazard_navigation_map')}
+              className="bg-white text-blue-700 hover:text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shadow-md hover:bg-slate-50 transition-all cursor-pointer pointer-events-auto border border-slate-200 active:scale-95"
+              title="Expand Full GIS Hazard Map"
+              aria-label="Expand GIS Map"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
