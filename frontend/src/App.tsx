@@ -3,7 +3,7 @@
  * Unified Desktop & Mobile Web Application Shell with RBAC
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   ScreenId,
   UserRole,
@@ -20,6 +20,7 @@ import {
   LiveGPSLocation,
   GPSFixStatus,
 } from './types';
+import { isUserTicketOwner } from './utils/logic';
 import { UserAccountModal } from './components/UserAccountModal';
 import { LiveGPSPromptModal } from './components/LiveGPSPromptModal';
 import {
@@ -172,7 +173,7 @@ export default function App() {
   const [elderProfile, setElderProfile] = useState<ElderProfile>(INITIAL_ELDER_PROFILE);
   const [shelters, setShelters] = useState<Shelter[]>(INITIAL_SHELTERS);
   const [hazards, setHazards] = useState<HazardIncident[]>(INITIAL_HAZARDS);
-  const [selectedTicketId, setSelectedTicketId] = useState<string>('TKT-8902');
+  const [selectedTicketId, setSelectedTicketId] = useState<string>('');
   const [selectedShelterForNavigation, setSelectedShelterForNavigation] = useState<string>('SHL-01');
   const [volunteerApplications, setVolunteerApplications] = useState<VolunteerApplication[]>(
     INITIAL_VOLUNTEER_APPLICATIONS
@@ -787,8 +788,18 @@ export default function App() {
     JanRakshakAPI.updateShelterOccupancy(shelterId, delta).catch(() => {});
   };
 
-  const currentSelectedTicket =
-    tickets.find((t) => t.id === selectedTicketId) || tickets[0];
+  // Filter tickets that belong strictly to the current logged-in citizen
+  const userTickets = useMemo(() => {
+    return tickets.filter((t) => isUserTicketOwner(t, currentUser));
+  }, [tickets, currentUser]);
+
+  // If a specific ticket was chosen, display it.
+  // Otherwise default to the user's own ticket, or null if a newly registered user with 0 tickets.
+  const currentSelectedTicket = selectedTicketId
+    ? tickets.find((t) => t.id === selectedTicketId) || null
+    : userTickets.length > 0
+    ? userTickets[0]
+    : null;
 
   // Dynamic Navigation Groups based on User Role
   const getNavigationGroups = () => {
@@ -1274,6 +1285,7 @@ export default function App() {
               tickets={tickets}
               onNavigate={handleNavigate}
               onSelectTicket={setSelectedTicketId}
+              currentUser={currentUser}
             />
           )}
 
@@ -1375,8 +1387,12 @@ export default function App() {
           {currentScreen === 'public_ticket_stepper' && (
             <PublicTicketStepper
               ticket={currentSelectedTicket}
+              userTickets={userTickets}
+              allTickets={tickets}
+              currentUser={currentUser}
               onNavigate={handleNavigate}
               onGoBack={handleGoBack}
+              onSelectTicket={setSelectedTicketId}
               onUpdateTicketPhoto={handleUpdateTicketPhoto}
             />
           )}

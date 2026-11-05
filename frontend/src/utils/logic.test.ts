@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateDistanceMeters, checkSpatialDeduplication, calculateShelterCapacity, getStageProgress } from './logic';
+import {
+  calculateDistanceMeters,
+  checkSpatialDeduplication,
+  calculateShelterCapacity,
+  getStageProgress,
+  isUserTicketOwner,
+  normalizePhoneNumber,
+} from './logic';
 
 test('calculateDistanceMeters accurately computes small geographic offsets', () => {
   // Coordinates approx 35 meters apart
@@ -117,5 +124,44 @@ test('calculateDetourWaypoint calculates a safe inland offset away from hazard',
   const detour = calculateDetourWaypoint(origin, destination, blocker);
   // Detour longitude should be shifted inland (westward: smaller longitude)
   assert.ok(detour.longitude < blocker.longitude);
+});
+
+test('normalizePhoneNumber cleans formatted Indian mobile numbers to 10 digits', () => {
+  assert.equal(normalizePhoneNumber('+91 98480 23145'), '9848023145');
+  assert.equal(normalizePhoneNumber('9848023145'), '9848023145');
+  assert.equal(normalizePhoneNumber('09848023145'), '9848023145');
+  assert.equal(normalizePhoneNumber(undefined), '');
+});
+
+test('isUserTicketOwner strictly prevents cross-user ticket data leakage', () => {
+  const userA = {
+    id: 'USR-101',
+    fullName: 'Satya Teja Chukka',
+    mobileNumber: '+91 99887 76655',
+    aadhaarNumber: '1234-5678-9012',
+  };
+
+  const userB_NewUser = {
+    id: 'USR-202',
+    fullName: 'Chiranjeevi Bakka',
+    mobileNumber: '+91 88776 65544',
+    aadhaarNumber: '9999-8888-7777',
+  };
+
+  const ticketA = {
+    id: 'TKT-8902',
+    citizenPhone: '+91 99887 76655',
+    citizenName: 'Satya Teja Chukka',
+    userId: 'USR-101',
+  };
+
+  // User A owns Ticket A
+  assert.equal(isUserTicketOwner(ticketA, userA), true);
+
+  // New User B must NOT own Ticket A!
+  assert.equal(isUserTicketOwner(ticketA, userB_NewUser), false);
+
+  // If user is null/unauthenticated, no ownership
+  assert.equal(isUserTicketOwner(ticketA, null), false);
 });
 

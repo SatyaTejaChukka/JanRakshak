@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { ScreenId, Ticket } from '../types';
+import { ScreenId, Ticket, UserProfile } from '../types';
+import { isUserTicketOwner } from '../utils/logic';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -24,21 +25,45 @@ import {
   AlertTriangle,
   Send,
   MessageSquare,
+  ClipboardList,
+  User,
 } from 'lucide-react';
 
 interface PublicTicketStepperProps {
-  ticket: Ticket;
+  ticket?: Ticket | null;
+  userTickets?: Ticket[];
+  allTickets?: Ticket[];
+  currentUser?: UserProfile | null;
   onNavigate: (screen: ScreenId) => void;
   onGoBack?: () => void;
+  onSelectTicket?: (ticketId: string) => void;
   onUpdateTicketPhoto?: (ticketId: string, photoUrl: string, type: 'before' | 'after') => void;
 }
 
 export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
-  ticket,
+  ticket: propTicket,
+  userTickets = [],
+  allTickets = [],
+  currentUser,
   onNavigate,
   onGoBack,
+  onSelectTicket,
   onUpdateTicketPhoto,
 }) => {
+  // Determine if passed ticket belongs strictly to the authenticated user
+  const isOwner = propTicket ? isUserTicketOwner(propTicket, currentUser) : false;
+
+  // Effective ticket to display:
+  // If user selected a ticket and it exists, use it.
+  // Else if user has filed tickets, display their most recent ticket.
+  // Otherwise null (indicates a new user with 0 complaints).
+  const effectiveTicket: Ticket | null =
+    propTicket && isOwner
+      ? propTicket
+      : userTickets.length > 0
+      ? userTickets[0]
+      : propTicket || null;
+
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
@@ -52,19 +77,27 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
   const afterFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const getSavedPhoto = (type: 'before' | 'after') => {
+    if (!effectiveTicket) return null;
     try {
-      return localStorage.getItem(`janrakshak_photo_${type}_${ticket.id}`) || null;
+      return localStorage.getItem(`janrakshak_photo_${type}_${effectiveTicket.id}`) || null;
     } catch {
       return null;
     }
   };
 
   const [beforePhoto, setBeforePhoto] = useState<string | null>(
-    ticket.beforeImageUrl || getSavedPhoto('before')
+    effectiveTicket?.beforeImageUrl || getSavedPhoto('before')
   );
   const [afterPhoto, setAfterPhoto] = useState<string | null>(
-    ticket.afterImageUrl || getSavedPhoto('after')
+    effectiveTicket?.afterImageUrl || getSavedPhoto('after')
   );
+
+  useEffect(() => {
+    if (effectiveTicket) {
+      setBeforePhoto(effectiveTicket.beforeImageUrl || getSavedPhoto('before'));
+      setAfterPhoto(effectiveTicket.afterImageUrl || getSavedPhoto('after'));
+    }
+  }, [effectiveTicket?.id, effectiveTicket?.beforeImageUrl, effectiveTicket?.afterImageUrl]);
 
   // Real GIS Leaflet Mini-Map Initialization (Streets & Satellite View - 100% Free & Unwatermarked)
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -78,9 +111,9 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
   };
 
   useEffect(() => {
-    if (!mapContainerRef.current) return;
-    const lat = ticket.coordinates?.latitude || 17.7126;
-    const lng = ticket.coordinates?.longitude || 83.3218;
+    if (!mapContainerRef.current || !effectiveTicket) return;
+    const lat = effectiveTicket.coordinates?.latitude || 17.7126;
+    const lng = effectiveTicket.coordinates?.longitude || 83.3218;
 
     if (!mapRef.current) {
       const map = L.map(mapContainerRef.current, {
@@ -124,9 +157,9 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
         .addTo(map)
         .bindPopup(`
           <div class="p-1 text-slate-900 font-sans text-xs">
-            <strong>${ticket.id}</strong><br/>
-            <span>${ticket.title}</span><br/>
-            <span class="text-[11px] text-slate-500">${ticket.location}</span>
+            <strong>${effectiveTicket.id}</strong><br/>
+            <span>${effectiveTicket.title}</span><br/>
+            <span class="text-[11px] text-slate-500">${effectiveTicket.location}</span>
           </div>
         `);
 
@@ -141,7 +174,7 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
         mapRef.current = null;
       }
     };
-  }, [ticket.id, ticket.coordinates?.latitude, ticket.coordinates?.longitude]);
+  }, [effectiveTicket?.id, effectiveTicket?.coordinates?.latitude, effectiveTicket?.coordinates?.longitude]);
 
   // Update Mini-Map Tile Layer when Switching Streets <-> Satellite View
   useEffect(() => {
@@ -155,25 +188,21 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
     tileLayerRef.current = newTile;
   }, [miniMapMode]);
 
-  useEffect(() => {
-    setBeforePhoto(ticket.beforeImageUrl || getSavedPhoto('before'));
-    setAfterPhoto(ticket.afterImageUrl || getSavedPhoto('after'));
-  }, [ticket.id, ticket.beforeImageUrl, ticket.afterImageUrl]);
-
   const handleBeforePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !effectiveTicket) return;
+    const currentTicket = effectiveTicket;
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         const dataUrl = reader.result;
         setBeforePhoto(dataUrl);
-        ticket.beforeImageUrl = dataUrl;
+        currentTicket.beforeImageUrl = dataUrl;
         try {
-          localStorage.setItem(`janrakshak_photo_before_${ticket.id}`, dataUrl);
+          localStorage.setItem(`janrakshak_photo_before_${currentTicket.id}`, dataUrl);
         } catch {}
         if (onUpdateTicketPhoto) {
-          onUpdateTicketPhoto(ticket.id, dataUrl, 'before');
+          onUpdateTicketPhoto(currentTicket.id, dataUrl, 'before');
         }
       }
     };
@@ -182,18 +211,19 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
 
   const handleAfterPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !effectiveTicket) return;
+    const currentTicket = effectiveTicket;
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         const dataUrl = reader.result;
         setAfterPhoto(dataUrl);
-        ticket.afterImageUrl = dataUrl;
+        currentTicket.afterImageUrl = dataUrl;
         try {
-          localStorage.setItem(`janrakshak_photo_after_${ticket.id}`, dataUrl);
+          localStorage.setItem(`janrakshak_photo_after_${currentTicket.id}`, dataUrl);
         } catch {}
         if (onUpdateTicketPhoto) {
-          onUpdateTicketPhoto(ticket.id, dataUrl, 'after');
+          onUpdateTicketPhoto(currentTicket.id, dataUrl, 'after');
         }
       }
     };
@@ -205,11 +235,12 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
   };
 
   const handleShare = () => {
+    if (!effectiveTicket) return;
     if (navigator.share) {
       navigator
         .share({
-          title: `JanRakshak Ticket ${ticket.id}`,
-          text: `Live status: ${ticket.title} at ${ticket.location}`,
+          title: `JanRakshak Ticket ${effectiveTicket.id}`,
+          text: `Live status: ${effectiveTicket.title} at ${effectiveTicket.location}`,
           url: window.location.href,
         })
         .catch(() => {});
@@ -243,6 +274,64 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
     resolved: 4,
     closed: 5,
   };
+
+  // If new user with no reports filed and not viewing a public ticket
+  if (!effectiveTicket) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_normal'))}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs transition-colors active:scale-95 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Dashboard</span>
+          </button>
+          <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-200">
+            Aadhaar Verified: {currentUser?.fullName || 'Active Citizen'}
+          </span>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center shadow-xs space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto shadow-inner">
+            <ClipboardList className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2 max-w-md mx-auto">
+            <div className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+              <User className="w-3.5 h-3.5 text-blue-600" />
+              <span>{currentUser?.mobileNumber || 'Registered Mobile'}</span>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+              No Civic Reports Filed Yet
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              You haven&apos;t submitted any road damage, waterlogging, or fallen cable reports yet.
+              Each complaint you file with GPS lock and photographic proof will be tracked here through all 5 municipal SLA stages with inspector verification proof.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => onNavigate('camera_defect_capture')}
+              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Snap &amp; Report Your First Defect</span>
+            </button>
+            <button
+              onClick={() => onNavigate('citizen_home_normal')}
+              className="w-full sm:w-auto px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-colors cursor-pointer"
+            >
+              Explore Public Ward Feed ({allTickets.length})
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const ticket = effectiveTicket;
   const activeStage = stageIndexMap[ticket.currentStage] || 3;
 
   return (
@@ -259,10 +348,62 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md">
-            PUBLIC SLA TRACKER · 4-HOUR SLA GUARANTEE
+            {isOwner ? 'MY CIVIC SLA TRACKER' : 'PUBLIC SLA TRACKER'} · 4-HOUR GUARANTEE
           </span>
         </div>
       </div>
+
+      {/* Ticket Ownership & Source Badge */}
+      {!isOwner ? (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-medium">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              Viewing Public Ward 14 Report (Filed by <strong>{ticket.citizenName}</strong>).
+            </span>
+          </div>
+          {userTickets.length > 0 && onSelectTicket && (
+            <button
+              onClick={() => onSelectTicket(userTickets[0].id)}
+              className="text-xs font-bold text-blue-700 underline shrink-0 hover:text-blue-900 cursor-pointer self-end sm:self-center"
+            >
+              Switch to My Reports ({userTickets.length})
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl px-4 py-2 text-xs flex items-center gap-2 font-medium">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>
+            Your Registered Report: <strong>{ticket.id}</strong> · Logged under {ticket.citizenPhone} with GPS proof.
+          </span>
+        </div>
+      )}
+
+      {/* User's Multiple Tickets Selector Pill Bar */}
+      {userTickets.length > 1 && (
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 space-y-2">
+          <div className="text-[11px] font-mono font-bold text-slate-500 uppercase flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+            <span>My Submitted Reports ({userTickets.length})</span>
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {userTickets.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => onSelectTicket && onSelectTicket(t.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold font-mono whitespace-nowrap transition-all cursor-pointer ${
+                  t.id === ticket.id
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {t.id} · {t.category} ({t.currentStage})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Interactive Top Action Sub-bar with Live Ticket Status */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">

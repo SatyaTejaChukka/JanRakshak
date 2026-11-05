@@ -86,3 +86,65 @@ export function getStageProgress(currentStageId: string): number {
   if (index === -1) return 20;
   return Math.round(((index + 1) / TICKET_STAGES.length) * 100);
 }
+
+/**
+ * Normalizes phone numbers to standard 10-digit format for secure identity matching
+ */
+export function normalizePhoneNumber(phone?: string | null): string {
+  if (!phone) return '';
+  return phone.replace(/\D/g, '').slice(-10);
+}
+
+/**
+ * Validates whether a given ticket belongs strictly to the authenticated user.
+ * Prevents cross-user data leakage.
+ */
+export function isUserTicketOwner(
+  ticket: {
+    citizenPhone?: string;
+    citizenName?: string;
+    userId?: string;
+    citizenAadhaar?: string;
+  },
+  user?: {
+    id?: string;
+    fullName?: string;
+    mobileNumber?: string;
+    aadhaarNumber?: string;
+  } | null
+): boolean {
+  if (!user) return false;
+
+  // 1. Direct user identifier match
+  if (ticket.userId && user.id && ticket.userId === user.id) {
+    return true;
+  }
+
+  // 2. Verified 10-digit mobile number match
+  const cleanTicketPhone = normalizePhoneNumber(ticket.citizenPhone);
+  const cleanUserPhone = normalizePhoneNumber(user.mobileNumber);
+  if (cleanTicketPhone && cleanUserPhone && cleanTicketPhone === cleanUserPhone) {
+    return true;
+  }
+
+  // 3. Aadhaar number match
+  if (
+    ticket.citizenAadhaar &&
+    user.aadhaarNumber &&
+    ticket.citizenAadhaar.replace(/\D/g, '') === user.aadhaarNumber.replace(/\D/g, '')
+  ) {
+    return true;
+  }
+
+  // 4. Exact full name match (fallback)
+  if (
+    ticket.citizenName &&
+    user.fullName &&
+    ticket.citizenName.trim().toLowerCase() === user.fullName.trim().toLowerCase() &&
+    ticket.citizenName.trim().length >= 3
+  ) {
+    return true;
+  }
+
+  return false;
+}

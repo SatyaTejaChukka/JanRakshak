@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ScreenId, Ticket } from '../types';
+import { ScreenId, Ticket, UserProfile } from '../types';
+import { isUserTicketOwner } from '../utils/logic';
 import {
   Camera,
   AlertTriangle,
@@ -21,23 +22,31 @@ import {
   Zap,
   Waves,
   Hammer,
+  User,
+  ClipboardList,
 } from 'lucide-react';
 
 interface CitizenHomeNormalProps {
   tickets: Ticket[];
   onNavigate: (screen: ScreenId, category?: Ticket['category']) => void;
   onSelectTicket: (ticketId: string) => void;
+  currentUser?: UserProfile | null;
 }
 
 export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
   tickets,
   onNavigate,
   onSelectTicket,
+  currentUser,
 }) => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [feedScope, setFeedScope] = useState<'my' | 'all'>('all');
 
-  const filteredTickets = tickets.filter((t) => {
+  const myTickets = tickets.filter((t) => isUserTicketOwner(t, currentUser));
+  const baseTickets = feedScope === 'my' ? myTickets : tickets;
+
+  const filteredTickets = baseTickets.filter((t) => {
     const matchesCategory =
       activeFilter === 'all' ||
       (activeFilter === 'pothole' && t.category.includes('Pothole')) ||
@@ -139,11 +148,22 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
             {/* trackReportBtn: xpath: //button[@id='trackReportBtn'] */}
             <button
               id="trackReportBtn"
-              onClick={() => onNavigate('public_ticket_stepper')}
+              onClick={() => {
+                if (myTickets.length > 0) {
+                  onSelectTicket(myTickets[0].id);
+                } else {
+                  onSelectTicket('');
+                }
+                onNavigate('public_ticket_stepper');
+              }}
               className="px-4 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm rounded-2xl border border-slate-200 transition-all flex items-center gap-2 cursor-pointer active:scale-95 shadow-2xs"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Track 5-Stage SLA</span>
+              <span>
+                {myTickets.length > 0
+                  ? `Track My Reports (${myTickets.length})`
+                  : 'Track My Reports (0)'}
+              </span>
             </button>
           </div>
         </div>
@@ -258,10 +278,35 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-              Active Public Civic Tickets & Ward Progress
-            </h2>
-            <p className="text-xs text-slate-500">Live 5-stage tracking with field-crew verification stamps</p>
+            <div className="flex items-center gap-2 mb-1">
+              <button
+                onClick={() => setFeedScope('my')}
+                className={`px-3 py-1 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                  feedScope === 'my'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>My Filed Reports ({myTickets.length})</span>
+              </button>
+              <button
+                onClick={() => setFeedScope('all')}
+                className={`px-3 py-1 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                  feedScope === 'all'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Ward 14 Feed ({tickets.length})</span>
+              </button>
+            </div>
+            <p className="text-xs text-slate-500">
+              {feedScope === 'my'
+                ? `Showing only reports filed under ${currentUser?.fullName || 'Your Account'} (${currentUser?.mobileNumber || ''})`
+                : 'Live 5-stage tracking with field-crew verification stamps'}
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -315,102 +360,127 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
         </div>
 
         {/* Ticket List Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTickets.map((t) => (
-            <div
-              key={t.id}
-              className="bg-white rounded-2xl border border-slate-200 p-5 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between space-y-4"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
-                    {t.id}
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{t.reportedAt}</span>
-                  </span>
-                </div>
-
-                <h3 className="text-sm font-bold text-slate-900 line-clamp-2 leading-snug">
-                  {t.title}
-                </h3>
-
-                <div className="flex items-start gap-1.5 text-xs text-slate-600">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                  <span className="line-clamp-2 text-xs leading-tight">{t.location}</span>
-                </div>
-
-                {/* Spatial merge notification if >1 citizen */}
-                {t.mergedCount > 1 && (
-                  <div className="p-2.5 bg-blue-50/80 border border-blue-200 rounded-xl text-[11px] text-blue-900 flex items-center justify-between">
-                    <span className="font-bold flex items-center gap-1">
-                      <Layers className="w-3.5 h-3.5 text-blue-600" />
-                      <span>{t.mergedCount} Reports Merged (50m cluster)</span>
+        {filteredTickets.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center space-y-3">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+              <ClipboardList className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">
+              {feedScope === 'my' ? 'No Complaints Filed by You Yet' : 'No Matching Reports Found'}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              {feedScope === 'my'
+                ? 'You have not submitted any civic complaints yet. Tap Snap & Report to log road craters or drainage issues.'
+                : 'Try selecting a different category filter or clearing your search keywords.'}
+            </p>
+            {feedScope === 'my' && (
+              <button
+                onClick={() => onNavigate('camera_defect_capture')}
+                className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs inline-flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Snap & Report Defect</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredTickets.map((t) => (
+              <div
+                key={t.id}
+                className="bg-white rounded-2xl border border-slate-200 p-5 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                      {t.id}
                     </span>
+                    <span className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{t.reportedAt}</span>
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 leading-snug">
+                    {t.title}
+                  </h3>
+
+                  <div className="flex items-start gap-1.5 text-xs text-slate-600">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                    <span className="line-clamp-2 text-xs leading-tight">{t.location}</span>
+                  </div>
+
+                  {/* Spatial merge notification if >1 citizen */}
+                  {t.mergedCount > 1 && (
+                    <div className="p-2.5 bg-blue-50/80 border border-blue-200 rounded-xl text-[11px] text-blue-900 flex items-center justify-between">
+                      <span className="font-bold flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5 text-blue-600" />
+                        <span>{t.mergedCount} Reports Merged (50m cluster)</span>
+                      </span>
+                      <button
+                        onClick={() => onNavigate('spatial_dedup_notice')}
+                        className="text-blue-700 underline font-bold hover:text-blue-900 cursor-pointer"
+                      >
+                        View
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 5-Stage Mini Stepper Strip */}
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider font-mono">
+                      Status
+                    </span>
+                    <span className="font-bold text-slate-800 capitalize bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                      {t.currentStage.replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  {/* Visual 5-Stage Mini Bar */}
+                  <div className="grid grid-cols-5 gap-1">
+                    {['submitted', 'deduplicated', 'assigned', 'in_progress', 'resolved'].map((stage, idx) => {
+                      const stages = ['submitted', 'deduplicated', 'assigned', 'in_progress', 'resolved'];
+                      const currentIdx = stages.indexOf(t.currentStage);
+                      const isCompleted = idx <= currentIdx;
+                      return (
+                        <div
+                          key={stage}
+                          className={`h-1.5 rounded-full transition-colors ${
+                            isCompleted
+                              ? t.currentStage === 'resolved'
+                                ? 'bg-emerald-500'
+                                : 'bg-blue-600'
+                              : 'bg-slate-200'
+                          }`}
+                          title={stage.replace('_', ' ')}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      SLA: {t.targetSlaHours || 48} Hours
+                    </span>
+
                     <button
-                      onClick={() => onNavigate('spatial_dedup_notice')}
-                      className="text-blue-700 underline font-bold hover:text-blue-900 cursor-pointer"
+                      onClick={() => {
+                        onSelectTicket(t.id);
+                        onNavigate('public_ticket_stepper');
+                      }}
+                      className="px-3 py-1 text-xs font-bold bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-800 rounded-lg transition-all flex items-center gap-1 cursor-pointer active:scale-95"
                     >
-                      View
+                      <span>Track 5-Stages</span>
+                      <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>
-                )}
-              </div>
-
-              {/* 5-Stage Mini Stepper Strip */}
-              <div className="pt-3 border-t border-slate-100 space-y-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider font-mono">
-                    Status
-                  </span>
-                  <span className="font-bold text-slate-800 capitalize bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                    {t.currentStage.replace('_', ' ')}
-                  </span>
-                </div>
-
-                {/* Visual 5-Stage Mini Bar */}
-                <div className="grid grid-cols-5 gap-1">
-                  {['submitted', 'deduplicated', 'assigned', 'in_progress', 'resolved'].map((stage, idx) => {
-                    const stages = ['submitted', 'deduplicated', 'assigned', 'in_progress', 'resolved'];
-                    const currentIdx = stages.indexOf(t.currentStage);
-                    const isCompleted = idx <= currentIdx;
-                    return (
-                      <div
-                        key={stage}
-                        className={`h-1.5 rounded-full transition-colors ${
-                          isCompleted
-                            ? t.currentStage === 'resolved'
-                              ? 'bg-emerald-500'
-                              : 'bg-blue-600'
-                            : 'bg-slate-200'
-                        }`}
-                        title={stage.replace('_', ' ')}
-                      />
-                    );
-                  })}
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    SLA: {t.targetSlaHours || 48} Hours
-                  </span>
-
-                  <button
-                    onClick={() => {
-                      onSelectTicket(t.id);
-                      onNavigate('public_ticket_stepper');
-                    }}
-                    className="px-3 py-1 text-xs font-bold bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-800 rounded-lg transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                  >
-                    <span>Track 5-Stages</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Senior Citizens & Special Assistance Strip */}

@@ -475,6 +475,8 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
           currentStage: 'submitted',
           citizenName: currentUser?.fullName || 'Verified Citizen',
           citizenPhone: currentUser?.mobileNumber || '+91 98480 12345',
+          userId: currentUser?.id,
+          citizenAadhaar: currentUser?.aadhaarNumber,
           mergedCount: 1,
           severity: severityMap[urgency],
           beforeImageUrl: capturedPhoto,

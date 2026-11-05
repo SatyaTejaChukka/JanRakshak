@@ -39,6 +39,8 @@ export interface Ticket {
   currentStage: 'submitted' | 'deduplicated' | 'assigned' | 'in_progress' | 'resolved';
   citizenName: string;
   citizenPhone: string;
+  userId?: string;
+  citizenAadhaar?: string;
   mergedCount: number;
   severity: 'Critical' | 'High' | 'Medium' | 'Low';
   assignedCrew?: {
