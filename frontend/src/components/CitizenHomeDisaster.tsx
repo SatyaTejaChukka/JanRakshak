@@ -15,6 +15,7 @@ import {
   Flame,
   ArrowLeft,
   Navigation,
+  HeartHandshake,
 } from 'lucide-react';
 
 interface CitizenHomeDisasterProps {
@@ -80,6 +81,37 @@ export const CitizenHomeDisaster: React.FC<CitizenHomeDisasterProps> = ({ onNavi
             <span className="font-mono font-bold text-base text-white">2,160 / 3,450 (62%)</span>
           </div>
         </div>
+      </div>
+
+      {/* Citizen Volunteer Enrolment Callout */}
+      <div className="bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
+            <HeartHandshake className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded uppercase">
+                CIVILIAN MOBILIZATION ACTIVE
+              </span>
+              <span className="text-xs text-slate-400">Join the Coastal Rescue Network</span>
+            </div>
+            <h3 className="text-base font-bold text-white mt-0.5">
+              Have 4x4 vehicles, boats, medical skills, or chainsaws?
+            </h3>
+            <p className="text-xs text-slate-300 max-w-xl">
+              Register as a verified JanRakshak Community Volunteer. NDRF 10th Battalion coordinates and deploys local responders to high-risk zones.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onNavigate('volunteer_interest_form')}
+          className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+        >
+          <HeartHandshake className="w-4 h-4" />
+          <span>Apply as Volunteer</span>
+        </button>
       </div>
 
       {/* Emergency Action Grid */}

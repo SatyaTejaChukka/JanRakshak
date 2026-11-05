@@ -96,7 +96,14 @@ export const NDRFDispatcherDashboard: React.FC<NDRFDispatcherDashboardProps> = (
           <span>Back to Disaster Hub</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => onNavigate('ndrf_volunteer_hub')}
+            className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-2 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Users className="w-4 h-4" />
+            <span>Volunteer Command Hub</span>
+          </button>
           <button
             onClick={() => onNavigate('district_collector_switcher')}
             className="text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 px-3 py-2 rounded-lg border border-slate-200"
