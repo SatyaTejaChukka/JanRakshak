@@ -16,6 +16,7 @@ import {
   MunicipalOfficer,
   UserProfile,
   ToastNotification,
+  EmergencyBroadcast,
 } from './types';
 import { UserAccountModal } from './components/UserAccountModal';
 import {
@@ -228,6 +229,73 @@ export default function App() {
       })
       .catch(() => {});
   }, []);
+
+  // Real-Time Emergency Broadcast Alert state across all connected citizens & users
+  const [activeEmergencyBroadcast, setActiveEmergencyBroadcast] = useState<EmergencyBroadcast | null>(null);
+
+  useEffect(() => {
+    // 1. Fetch any recently published active emergency broadcast from backend
+    JanRakshakAPI.getEmergencyBroadcasts()
+      .then((res) => {
+        if (res && res.length > 0) {
+          setActiveEmergencyBroadcast(res[0]);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Local storage initial check
+    try {
+      const raw = localStorage.getItem('janrakshak_emergency_broadcasts');
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (list && list.length > 0) {
+          setActiveEmergencyBroadcast(list[0]);
+        }
+      }
+    } catch {}
+
+    // 3. Connect real-time cross-tab / cross-window BroadcastChannel mesh
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('janrakshak_emergency_mesh');
+        bc.onmessage = (event) => {
+          if (event.data?.type === 'EMERGENCY_BROADCAST') {
+            const bcData = event.data.data;
+            setActiveEmergencyBroadcast(bcData);
+            showToast('alert', `EMERGENCY BROADCAST: ${bcData.title}`, bcData.message);
+
+            // Play emergency tone & vibrate
+            try {
+              const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+              const osc = audioCtx.createOscillator();
+              const gain = audioCtx.createGain();
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+              osc.frequency.setValueAtTime(587.33, audioCtx.currentTime + 0.15);
+              gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+              gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+              osc.connect(gain);
+              gain.connect(audioCtx.destination);
+              osc.start();
+              osc.stop(audioCtx.currentTime + 0.5);
+            } catch {}
+
+            if ('vibrate' in navigator) {
+              navigator.vibrate([400, 150, 400]);
+            }
+          }
+        };
+      }
+    } catch (e) {
+      console.warn('[JanRakshak Mesh] BroadcastChannel setup error:', e);
+    }
+
+    return () => {
+      bc?.close();
+    };
+  }, []);
+
 
   // Navigation History Stack & Intake Category State
   const [navigationHistory, setNavigationHistory] = useState<ScreenId[]>([]);
@@ -756,6 +824,58 @@ export default function App() {
         onOpenAccount={() => setIsAccountModalOpen(true)}
         onLogout={currentRole === 'CITIZEN' ? handleCitizenLogout : handleOfficialLogout}
       />
+
+      {/* Real-Time Civil Defense Emergency Broadcast Alert Banner (Notifies all nearby citizens & users) */}
+      {activeEmergencyBroadcast && (
+        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white px-4 sm:px-6 py-3 border-b-2 border-red-400 shadow-xl glow-red animate-in slide-in-from-top duration-200">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3 min-w-0">
+              <div className="p-2 bg-white/20 rounded-xl shrink-0 shadow-inner">
+                <Radio className="w-5 h-5 text-yellow-300 animate-pulse" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-mono font-black uppercase bg-white/25 px-2 py-0.5 rounded-full border border-white/30">
+                    EMERGENCY CELL BROADCAST · 4370
+                  </span>
+                  <span className="text-[11px] text-red-100 font-mono">
+                    {activeEmergencyBroadcast.timestamp}
+                  </span>
+                  <span className="text-[11px] text-red-100 font-medium hidden sm:inline">
+                    · Authorized by: <strong className="text-white">{activeEmergencyBroadcast.senderName}</strong>
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-black text-white mt-0.5 truncate">
+                  {activeEmergencyBroadcast.title}
+                </h3>
+                <p className="text-xs text-red-100 mt-0.5 leading-snug line-clamp-2 sm:line-clamp-none">
+                  {activeEmergencyBroadcast.message}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+              <button
+                onClick={() => {
+                  handleNavigate('hazard_navigation_map');
+                  setActiveEmergencyBroadcast(null);
+                }}
+                className="px-3.5 py-1.5 bg-white text-red-700 font-bold text-xs rounded-xl shadow-xs transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5"
+              >
+                <Compass className="w-3.5 h-3.5 text-red-600" />
+                <span>Evacuation Route</span>
+              </button>
+              <button
+                onClick={() => setActiveEmergencyBroadcast(null)}
+                className="px-3 py-1.5 bg-red-900/60 hover:bg-red-900 text-white font-semibold text-xs rounded-xl border border-red-400/50 cursor-pointer"
+              >
+                Acknowledge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Real-Time Operational Telemetry Strip */}
       <div

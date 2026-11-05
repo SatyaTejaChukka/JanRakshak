@@ -328,6 +328,36 @@ INITIAL_MUNICIPAL_OFFICERS: List[Dict[str, Any]] = [
 ]
 
 
+INITIAL_BROADCASTS: List[Dict[str, Any]] = [
+    {
+        "id": "BC-1091",
+        "title": "IMD Cyclone Montha Landfall Alert",
+        "message": "Category 3 landfall projected in 4 hours with +3.8m coastal tidal surge. Evacuate low-lying areas in Ward 14.",
+        "severity": "CRITICAL",
+        "targetZone": "Ward 14 (Beach Road & Coastal Belt)",
+        "senderName": "Col. Vikram Singh (NDRF 10th Bn)",
+        "timestamp": "10:00 AM Today",
+        "channel": "CELL_BROADCAST_4370_AND_APP",
+        "dispatchedToCitizens": True,
+        "dispatchedToFieldResponders": True,
+        "activeUserAlertCount": 142,
+    }
+]
+
+INITIAL_SOS_INCIDENTS: List[Dict[str, Any]] = [
+    {
+        "id": "SOS-4091",
+        "priority": "SEV-1 RED",
+        "elderName": "Venkateswara Rao (Age 79)",
+        "location": "Coastal Battery Road Flat 302, Ward 14",
+        "details": "Lift disabled, Oxygen Concentrator power backup required.",
+        "assignedUnit": "NDRF 10th Bn IRB Boat #04",
+        "status": "DISPATCHED",
+        "timestamp": "10:15 AM Today",
+    }
+]
+
+
 class MockDBStore:
     """Thread-safe state repository for the JanRakshak system."""
 
@@ -339,7 +369,10 @@ class MockDBStore:
         self.volunteer_applications = copy.deepcopy(INITIAL_VOLUNTEER_APPLICATIONS)
         self.active_volunteers = copy.deepcopy(INITIAL_ACTIVE_VOLUNTEERS)
         self.municipal_officers = copy.deepcopy(INITIAL_MUNICIPAL_OFFICERS)
+        self.broadcasts = copy.deepcopy(INITIAL_BROADCASTS)
+        self.sos_incidents = copy.deepcopy(INITIAL_SOS_INCIDENTS)
         self.is_disaster_mode = False
+
 
 
 db_store = MockDBStore()

@@ -310,3 +310,50 @@ def test_official_registration_and_login():
     assert login_data["officer"]["id"] == test_badge
 
 
+def test_emergency_broadcast_and_incidents():
+    """Verify that dispatching an emergency broadcast stores and disseminates alerts."""
+    test_title = "IMD Severe Storm Surge Warning"
+    test_msg = "Beach Road water level rising +4.0m. All citizens evacuate immediately."
+
+    # 1. Publish broadcast
+    bc_res = client.post(
+        "/api/v1/sos/broadcast",
+        json={
+            "title": test_title,
+            "message": test_msg,
+            "severity": "CRITICAL",
+            "targetZone": "Ward 14 Beach Road",
+            "senderName": "NDRF 10th Battalion War Room",
+        },
+    )
+    assert bc_res.status_code == 201
+    bc_data = bc_res.json()
+    assert bc_data["title"] == test_title
+    assert bc_data["severity"] == "CRITICAL"
+    assert bc_data["dispatchedToCitizens"] is True
+
+    # 2. Verify in active broadcasts list
+    list_res = client.get("/api/v1/sos/broadcasts")
+    assert list_res.status_code == 200
+    broadcasts = list_res.json()
+    assert len(broadcasts) >= 1
+    assert any(b["title"] == test_title for b in broadcasts)
+
+    # 3. Trigger Elder SOS and check active incidents
+    sos_res = client.post(
+        "/api/v1/sos/trigger",
+        json={"triggerType": "ONE_TAP_PANIC", "batteryPercentage": 82},
+    )
+    assert sos_res.status_code == 201
+    sos_data = sos_res.json()
+    assert sos_data["status"] == "DISPATCHED"
+
+    # 4. Check that NDRF incidents list has this new incident
+    inc_res = client.get("/api/v1/sos/incidents")
+    assert inc_res.status_code == 200
+    incidents = inc_res.json()
+    assert len(incidents) >= 1
+    assert any(i["id"] == sos_data["sosEventId"] for i in incidents)
+
+
+

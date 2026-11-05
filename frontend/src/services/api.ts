@@ -118,6 +118,58 @@ export const JanRakshakAPI = {
     return safeFetch('/sos/proximity-volunteers');
   },
 
+  async sendEmergencyBroadcast(payload: {
+    title: string;
+    message: string;
+    severity?: string;
+    targetZone?: string;
+    senderName?: string;
+  }): Promise<any> {
+    const fallbackRecord = {
+      id: `BC-${Date.now().toString().slice(-4)}`,
+      title: payload.title,
+      message: payload.message,
+      severity: payload.severity || 'CRITICAL',
+      targetZone: payload.targetZone || 'Ward 14 (Coastal Belt & Beach Road)',
+      senderName: payload.senderName || 'NDRF 10th Battalion War Room Command',
+      timestamp: 'Just now',
+      channel: 'CELL_BROADCAST_4370_AND_APP',
+      dispatchedToCitizens: true,
+      dispatchedToFieldResponders: true,
+      activeUserAlertCount: 168,
+    };
+
+    // Save in local storage for instant multi-tab sync
+    try {
+      const raw = localStorage.getItem('janrakshak_emergency_broadcasts');
+      const list = raw ? JSON.parse(raw) : [];
+      list.unshift(fallbackRecord);
+      localStorage.setItem('janrakshak_emergency_broadcasts', JSON.stringify(list));
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('janrakshak_emergency_mesh');
+        bc.postMessage({ type: 'EMERGENCY_BROADCAST', data: fallbackRecord });
+      }
+    } catch {}
+
+    return safeFetch(
+      '/sos/broadcast',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      fallbackRecord
+    );
+  },
+
+  async getEmergencyBroadcasts(): Promise<any[]> {
+    return safeFetch('/sos/broadcasts', {}, []);
+  },
+
+  async getActiveSOSIncidents(): Promise<any[]> {
+    return safeFetch('/sos/incidents', {}, []);
+  },
+
+
   // --- Shelters & Hazards ---
   async getShelters(): Promise<Shelter[]> {
     return safeFetch<Shelter[]>('/shelters');

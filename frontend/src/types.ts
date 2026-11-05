@@ -49,7 +49,34 @@ export interface Ticket {
   };
   beforeImageUrl?: string;
   afterImageUrl?: string;
+  targetSlaHours?: number;
 }
+
+export interface EmergencyBroadcast {
+  id: string;
+  title: string;
+  message: string;
+  severity: 'CRITICAL' | 'HIGH' | 'ADVISORY';
+  targetZone: string;
+  senderName: string;
+  timestamp: string;
+  channel: string;
+  dispatchedToCitizens?: boolean;
+  dispatchedToFieldResponders?: boolean;
+  activeUserAlertCount?: number;
+}
+
+export interface SOSIncident {
+  id: string;
+  priority: string;
+  elderName: string;
+  location: string;
+  details: string;
+  assignedUnit: string;
+  status: string;
+  timestamp: string;
+}
+
 
 export interface ElderProfile {
   id: string;
