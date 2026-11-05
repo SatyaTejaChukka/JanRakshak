@@ -408,3 +408,4 @@ CREATE TABLE IF NOT EXISTS sos_responders (
 );
 CREATE INDEX IF NOT EXISTS idx_sos_responders_req ON sos_responders (sos_request_id);
 CREATE INDEX IF NOT EXISTS idx_sos_responders_vol ON sos_responders (volunteer_id);
+

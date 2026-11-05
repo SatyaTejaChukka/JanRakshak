@@ -99,3 +99,4 @@ class Agency(Base):
     # Relationships
     categories: Mapped[List["Category"]] = relationship("Category", back_populates="default_agency")
     tickets: Mapped[List["Ticket"]] = relationship("Ticket", back_populates="assigned_agency")
+

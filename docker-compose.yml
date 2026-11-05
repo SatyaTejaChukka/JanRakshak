@@ -24,3 +24,4 @@ services:
 volumes:
   postgis_data:
     driver: local
+

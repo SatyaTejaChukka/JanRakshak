@@ -272,3 +272,4 @@ class FieldWorkerCheckin(Base):
 
     # Relationships
     ticket: Mapped["Ticket"] = relationship("Ticket", back_populates="checkins")
+

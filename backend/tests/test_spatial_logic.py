@@ -56,3 +56,4 @@ def test_ward_point_in_polygon_containment():
     # Point outside Ward 14 (Gajuwaka Industrial Belt)
     outside_pt = Point(83.210, 17.690)
     assert ward14_poly.contains(outside_pt) is False
+

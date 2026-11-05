@@ -170,3 +170,4 @@ LIMIT 5;
 3. **Step 3:** Implement modern SQLAlchemy 2.0 Async ORM models in `backend/app/models/`.
 4. **Step 4:** Implement Pydantic v2 domain schemas for request/response validation in `backend/app/schemas/`.
 5. **Step 5:** Write unit tests verifying spatial deduplication queries and relationship cascades.
+

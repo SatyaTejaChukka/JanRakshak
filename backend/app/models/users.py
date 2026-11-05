@@ -103,3 +103,4 @@ class MunicipalOfficer(Base):
     user: Mapped[Optional["User"]] = relationship("User", back_populates="officer_profile")
     ward: Mapped[Optional["Ward"]] = relationship("Ward", back_populates="officers")
     assigned_tickets: Mapped[List["Ticket"]] = relationship("Ticket", back_populates="assigned_officer")
+

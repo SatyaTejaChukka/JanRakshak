@@ -3,7 +3,7 @@
  * Unified Desktop & Mobile Web Application Shell with RBAC
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScreenId,
   UserRole,
@@ -41,6 +41,7 @@ import { CycloneReliefShelter } from './components/CycloneReliefShelter';
 import { GVMCAdminDashboard } from './components/GVMCAdminDashboard';
 import { NDRFVolunteerManagement } from './components/NDRFVolunteerManagement';
 import { VolunteerInterestForm } from './components/VolunteerInterestForm';
+import { JanRakshakAPI } from './services/api';
 import {
   Home,
   Camera,
@@ -85,6 +86,39 @@ export default function App() {
     INITIAL_MUNICIPAL_OFFICERS
   );
 
+  // Synchronize state with backend API on mount
+  useEffect(() => {
+    JanRakshakAPI.getTickets()
+      .then((data) => {
+        if (data && data.length > 0) setTickets(data);
+      })
+      .catch(() => {});
+
+    JanRakshakAPI.getShelters()
+      .then((data) => {
+        if (data && data.length > 0) setShelters(data);
+      })
+      .catch(() => {});
+
+    JanRakshakAPI.getOfficers()
+      .then((data) => {
+        if (data && data.length > 0) setMunicipalOfficers(data);
+      })
+      .catch(() => {});
+
+    JanRakshakAPI.getActiveVolunteers()
+      .then((data) => {
+        if (data && data.length > 0) setActiveVolunteers(data);
+      })
+      .catch(() => {});
+
+    JanRakshakAPI.getVolunteerApplications()
+      .then((data) => {
+        if (data && data.length > 0) setVolunteerApplications(data);
+      })
+      .catch(() => {});
+  }, []);
+
   const handleNavigate = (screen: ScreenId) => {
     setCurrentScreen(screen);
     if (screen === 'citizen_home_disaster') {
@@ -109,6 +143,7 @@ export default function App() {
 
   const handleToggleDisasterMode = (enabled: boolean) => {
     setIsDisasterMode(enabled);
+    JanRakshakAPI.toggleSystemMode(enabled).catch(() => {});
     if (currentRole === 'CITIZEN') {
       setCurrentScreen(enabled ? 'citizen_home_disaster' : 'citizen_home_normal');
     }
@@ -116,12 +151,14 @@ export default function App() {
 
   const handleAddNewTicket = (newTicket: Ticket) => {
     setTickets([newTicket, ...tickets]);
+    JanRakshakAPI.createTicket(newTicket).catch(() => {});
   };
 
   const handleUpdateTicketStage = (ticketId: string, stage: Ticket['currentStage']) => {
     setTickets((prev) =>
       prev.map((t) => (t.id === ticketId ? { ...t, currentStage: stage } : t))
     );
+    JanRakshakAPI.updateTicketStage(ticketId, stage).catch(() => {});
   };
 
   const handleAssignOfficerToTicket = (ticketId: string, officer: MunicipalOfficer) => {
@@ -148,22 +185,26 @@ export default function App() {
           : o
       )
     );
+    JanRakshakAPI.assignOfficer(ticketId, officer.id).catch(() => {});
   };
 
   const handleApproveTicketResolution = (ticketId: string) => {
     setTickets((prev) =>
       prev.map((t) => (t.id === ticketId ? { ...t, currentStage: 'resolved' } : t))
     );
+    JanRakshakAPI.auditPhotoProof(ticketId, 'APPROVE').catch(() => {});
   };
 
-  const handleRejectTicketResolution = (ticketId: string, _reason: string) => {
+  const handleRejectTicketResolution = (ticketId: string, reason: string) => {
     setTickets((prev) =>
       prev.map((t) => (t.id === ticketId ? { ...t, currentStage: 'in_progress' } : t))
     );
+    JanRakshakAPI.auditPhotoProof(ticketId, 'REJECT', reason).catch(() => {});
   };
 
   const handleSubmitVolunteerApplication = (application: VolunteerApplication) => {
     setVolunteerApplications((prev) => [application, ...prev]);
+    JanRakshakAPI.submitVolunteerApplication(application).catch(() => {});
   };
 
   const handleApproveVolunteerApplication = (applicationId: string) => {
@@ -189,16 +230,19 @@ export default function App() {
     };
 
     setActiveVolunteers((prev) => [newVolunteer, ...prev]);
+    JanRakshakAPI.approveVolunteerApplication(applicationId).catch(() => {});
   };
 
   const handleRejectVolunteerApplication = (applicationId: string) => {
     setVolunteerApplications((prev) =>
       prev.map((a) => (a.id === applicationId ? { ...a, status: 'REJECTED' } : a))
     );
+    JanRakshakAPI.rejectVolunteerApplication(applicationId).catch(() => {});
   };
 
   const handleAddDirectVolunteer = (volunteer: ActiveVolunteer) => {
     setActiveVolunteers((prev) => [volunteer, ...prev]);
+    JanRakshakAPI.directOnboardVolunteer(volunteer).catch(() => {});
   };
 
   const handleUpdateVolunteerStatus = (
@@ -217,6 +261,9 @@ export default function App() {
           : v
       )
     );
+    if (incidentId) {
+      JanRakshakAPI.dispatchVolunteer(volunteerId, incidentId, status).catch(() => {});
+    }
   };
 
   const handleUpdateOccupancy = (shelterId: string, delta: number) => {
@@ -230,6 +277,7 @@ export default function App() {
           : s
       )
     );
+    JanRakshakAPI.updateShelterOccupancy(shelterId, delta).catch(() => {});
   };
 
   const currentSelectedTicket =

@@ -159,3 +159,4 @@ class SOSResponder(Base):
     # Relationships
     sos_request: Mapped["SOSRequest"] = relationship("SOSRequest", back_populates="responders")
     volunteer: Mapped["ActiveVolunteer"] = relationship("ActiveVolunteer", back_populates="deployments")
+

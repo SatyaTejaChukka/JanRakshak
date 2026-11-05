@@ -278,3 +278,4 @@ class Alert(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
