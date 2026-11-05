@@ -46,6 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleSidebar,
   currentUser,
   onOpenAccount,
+  onLogout,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
