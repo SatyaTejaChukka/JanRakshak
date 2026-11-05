@@ -218,3 +218,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / Frontend
+node_modules/
+dist/
+.env
+.env.local
+.DS_Store
+*.log
+
+# AI Studio artifacts
+.aistudio/

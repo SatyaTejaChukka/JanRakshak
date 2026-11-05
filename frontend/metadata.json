@@ -1,0 +1,6 @@
+{
+  "name": "JanRakshak — Dual-Mode Civic & Disaster Management Platform",
+  "description": "Unified civic defect reporting with 50m spatial deduplication, elder SOS proximity rescue, cyclone shelter capacity, and NDRF dispatcher command.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

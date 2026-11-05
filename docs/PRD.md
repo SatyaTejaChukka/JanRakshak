@@ -2,7 +2,7 @@
 
 | Document Attribute | Details |
 |:---|:---|
-| **Product Name** | **JanRakshak** (CivicPulse) |
+| **Product Name** | **JanRakshak** |
 | **Document Version** | `1.0.0` (Production & Hackathon Baseline) |
 | **Status** | Approved for Implementation |
 | **Target Launch Region** | Visakhapatnam Metropolitan Region (GVMC, APEPDCL, NDRF 10th Battalion) |

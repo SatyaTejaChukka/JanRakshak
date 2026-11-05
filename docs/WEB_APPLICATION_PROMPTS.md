@@ -1,4 +1,4 @@
-# JanRakshak (CivicPulse) — Desktop Web Application UX Architecture & Stitch Prompts
+# JanRakshak — Desktop Web Application UX Architecture & Stitch Prompts
 
 | Document Attribute | Details |
 |:---|:---|
@@ -17,7 +17,7 @@ Review of `frontend/src`:
 1. **Core Data & Logic:** `types.ts`, `seedData.ts`, and `logic.ts` provide solid models (13 screens, 5-stage tickets, Haversine 50m deduplication, shelter occupancy calculations).
 2. **Current UI Artifacts:** The 13 existing components in `frontend/src/components/` were built primarily around mobile-style single-column layouts (`max-w-4xl`, mobile preview drawers).
 3. **Inconsistencies to Rectify:**
-   - **Branding:** Components use "JanSuraksha"; the official project name is **JanRakshak (CivicPulse)**.
+   - **Branding:** Components previously used "JanSuraksha"; the official project name is **JanRakshak**.
    - **Forbidden Styles:** Some components contain purple text (`text-purple-700` in HazardNavigationMap) and three-color gradient ribbons (`from-red-600 via-rose-600 to-amber-600`).
    - **Web Layout Deficit:** Desktop web needs **persistent command navigation**, **multi-column triage panes (Queue + Map + Inspector)**, **high-density data tables with sorting/filtering**, and **split-screen GIS workspaces**.
 
@@ -30,7 +30,7 @@ The web application uses a unified, high-density desktop shell layout across bot
 ```
 +-------------------------------------------------------------------------------------------------------------+
 | TOP COMMAND HEADER (Height: 56px)                                                                            |
-| [Emblem] JanRakshak (CivicPulse) | Mode Badge: [NORMAL CIVIC / DISASTER CYCLONE] | Telemetry | User Profile   |
+| [Emblem] JanRakshak | Mode Badge: [NORMAL CIVIC / DISASTER CYCLONE] | Telemetry | User Profile   |
 +-------------------+---------------------------------------------------------+-------------------------------+
 | LEFT NAVIGATION   | MAIN WORKSPACE CANVAS (Width: 840px - 1100px)           | RIGHT INSPECTOR / ACTION PANE |
 | DRAWER            |                                                         | (Width: 340px - 380px)        |
@@ -82,7 +82,7 @@ Layout Architecture:
 - Zero purple gradients, zero glowing effects. Clean GovTech aesthetic (Inter font).
 
 Top Global Header:
-- Left: Municipal crest + bold text "JanRakshak (CivicPulse) • Greater Visakhapatnam Municipal Corporation".
+- Left: Municipal crest + bold text "JanRakshak • Greater Visakhapatnam Municipal Corporation".
 - Center: Jurisdiction Selector dropdown "All Zones • Zone 2 (Madhurawada) Active".
 - Right: Search input field (with keyboard shortcut indicator "Ctrl+K"), Notification bell with badge "4", and Ward Officer profile avatar (AE K. Rao).
 

@@ -1,4 +1,4 @@
-# JanRakshak (CivicPulse) — Dual-Mode Civic & Disaster Response Platform
+# JanRakshak — Dual-Mode Civic & Disaster Response Platform
 ### Comprehensive Technical Specification & Hackathon Blueprint
 **Target Pilot:** Visakhapatnam (GVMC, APEPDCL, NDRF 10th Battalion, AP State Disaster Management)  
 **Document Version:** 1.0.0 (Production Hackathon Spec)  

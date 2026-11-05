@@ -2,7 +2,7 @@
 
 | Document Attribute | Details |
 |:---|:---|
-| **System Name** | **JanRakshak** (CivicPulse) Technical Architecture |
+| **System Name** | **JanRakshak** Technical Architecture |
 | **Document Version** | `1.0.0` (Production & Hackathon Baseline) |
 | **Status** | Approved for Development |
 | **Primary Frameworks** | React 18 (PWA), Python FastAPI 0.110+, PostgreSQL 16 + PostGIS 3.4 |

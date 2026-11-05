@@ -2,7 +2,7 @@
 
 | Document Attribute | Details |
 |:---|:---|
-| **Project** | **JanRakshak** (CivicPulse) Dual-Mode Platform |
+| **Project** | **JanRakshak** Dual-Mode Platform |
 | **Document Version** | `1.0.0` (Production & Hackathon Execution Plan) |
 | **Execution Window** | 24-Hour Hackathon Sprint / 4-Week Production Sprint |
 | **Team Distribution** | 3 to 4 Engineers (Frontend Lead, Backend/GIS Lead, Full-Stack / Integrations) |
