@@ -21,6 +21,7 @@ interface CycloneReliefShelterProps {
   onNavigate: (screen: ScreenId) => void;
   onUpdateOccupancy: (shelterId: string, delta: number) => void;
   onGoBack?: () => void;
+  onSelectShelterForNavigation?: (shelterId: string) => void;
 }
 
 export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
@@ -28,6 +29,7 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
   onNavigate,
   onUpdateOccupancy,
   onGoBack,
+  onSelectShelterForNavigation,
 }) => {
   const [selectedShelterId, setSelectedShelterId] = useState<string>('SHL-01');
 
@@ -233,6 +235,9 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (onSelectShelterForNavigation) {
+                      onSelectShelterForNavigation(shelter.id);
+                    }
                     onNavigate('hazard_navigation_map');
                   }}
                   className="flex-1 py-2 px-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer"

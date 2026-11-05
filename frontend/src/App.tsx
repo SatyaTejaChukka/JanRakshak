@@ -94,6 +94,7 @@ export default function App() {
   const [shelters, setShelters] = useState<Shelter[]>(INITIAL_SHELTERS);
   const [hazards, setHazards] = useState<HazardIncident[]>(INITIAL_HAZARDS);
   const [selectedTicketId, setSelectedTicketId] = useState<string>('TKT-8902');
+  const [selectedShelterForNavigation, setSelectedShelterForNavigation] = useState<string>('SHL-01');
   const [volunteerApplications, setVolunteerApplications] = useState<VolunteerApplication[]>(
     INITIAL_VOLUNTEER_APPLICATIONS
   );
@@ -791,7 +792,10 @@ export default function App() {
 
           {currentScreen === 'hazard_navigation_map' && (
             <HazardNavigationMap
+              tickets={tickets}
               hazards={hazards}
+              shelters={shelters}
+              targetShelterId={selectedShelterForNavigation}
               onNavigate={handleNavigate}
               onGoBack={handleGoBack}
             />
@@ -833,6 +837,7 @@ export default function App() {
               onNavigate={handleNavigate}
               onUpdateOccupancy={handleUpdateOccupancy}
               onGoBack={handleGoBack}
+              onSelectShelterForNavigation={setSelectedShelterForNavigation}
             />
           )}
         </main>

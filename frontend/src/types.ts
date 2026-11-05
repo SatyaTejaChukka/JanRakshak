@@ -66,12 +66,16 @@ export interface Shelter {
   waterSupplyStatus: 'Abundant' | 'Moderate' | 'Critical';
   generatorStatus: 'Operational' | 'Standby' | 'Offline';
   safeRouteStatus: 'Clear & Elevated' | 'Caution - Waterlogged' | 'Inaccessible';
+  coordinates: { latitude: number; longitude: number };
 }
 
 export interface HazardIncident {
   id: string;
   type: 'Road Waterlogging' | 'Fallen High-Tension Wire' | 'Uprooted Banyan Tree' | 'Embankment Breach' | 'Debris Barrier';
-  coordinates: { x: number; y: number };
+  coordinates: { x: number; y: number; latitude?: number; longitude?: number };
+  latitude?: number;
+  longitude?: number;
+  affectedRoad?: string;
   severity: 'Extreme' | 'High' | 'Moderate';
   reportedAt: string;
   recommendedAction: string;

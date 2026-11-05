@@ -49,3 +49,73 @@ test('getStageProgress computes accurate percentage', () => {
   assert.equal(getStageProgress('assigned'), 60);
   assert.equal(getStageProgress('resolved'), 100);
 });
+
+test('isTicketRoadBlocking accurately identifies critical road obstructions', async () => {
+  const { isTicketRoadBlocking } = await import('./routingEngine');
+
+  const criticalPothole: any = {
+    id: 'TKT-8902',
+    category: 'Pothole & Craters',
+    title: 'Severe 4ft Crater on Beach Road',
+    severity: 'High',
+    currentStage: 'in_progress',
+  };
+  assert.equal(isTicketRoadBlocking(criticalPothole), true);
+
+  const minorLight: any = {
+    id: 'TKT-8910',
+    category: 'Streetlight Outage',
+    title: 'Flickering bulb',
+    severity: 'Low',
+    currentStage: 'submitted',
+  };
+  assert.equal(isTicketRoadBlocking(minorLight), false);
+
+  const resolvedPothole: any = {
+    id: 'TKT-8902',
+    category: 'Pothole & Craters',
+    title: 'Severe 4ft Crater on Beach Road',
+    severity: 'High',
+    currentStage: 'resolved',
+  };
+  assert.equal(isTicketRoadBlocking(resolvedPothole), false);
+});
+
+test('detectRoadblocksOnRoute detects tickets intersecting route within proximity buffer', async () => {
+  const { detectRoadblocksOnRoute } = await import('./routingEngine');
+
+  // Straight line route from (17.7120, 83.3200) to (17.7200, 83.3200)
+  const polyline: [number, number][] = [
+    [17.7120, 83.3200],
+    [17.7160, 83.3200],
+    [17.7200, 83.3200],
+  ];
+
+  // Ticket right beside the segment (~20m offset in longitude)
+  const blockingTicket: any = {
+    id: 'TKT-8902',
+    category: 'Pothole & Craters',
+    title: 'Severe 4ft Crater on Beach Road',
+    severity: 'High',
+    coordinates: { latitude: 17.7160, longitude: 83.3202 },
+    currentStage: 'in_progress',
+  };
+
+  const detected = detectRoadblocksOnRoute(polyline, [blockingTicket], [], 90);
+  assert.equal(detected.length, 1);
+  assert.equal(detected[0].id, 'TKT-8902');
+  assert.ok(detected[0].distanceToRouteMeters < 35);
+});
+
+test('calculateDetourWaypoint calculates a safe inland offset away from hazard', async () => {
+  const { calculateDetourWaypoint } = await import('./routingEngine');
+
+  const origin = { latitude: 17.7126, longitude: 83.3195 };
+  const destination = { latitude: 17.7295, longitude: 83.3225 };
+  const blocker = { latitude: 17.7180, longitude: 83.3210 };
+
+  const detour = calculateDetourWaypoint(origin, destination, blocker);
+  // Detour longitude should be shifted inland (westward: smaller longitude)
+  assert.ok(detour.longitude < blocker.longitude);
+});
+
