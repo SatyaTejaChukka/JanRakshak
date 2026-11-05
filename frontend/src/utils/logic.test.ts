@@ -24,6 +24,7 @@ test('checkSpatialDeduplication flags reports within 50 meters with same categor
   const res = checkSpatialDeduplication(newPoint, 'Pothole & Craters', existing);
   assert.equal(res.isDuplicate, true);
   assert.equal(res.parentTicketId, 'TKT-8902');
+  assert.equal(res.duplicateId, 'TKT-8902');
   assert.ok(res.distanceMeters! <= 50);
 
   // Different category should NOT deduplicate even if close

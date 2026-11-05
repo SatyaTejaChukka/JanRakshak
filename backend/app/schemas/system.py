@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class SystemModeToggleRequest(BaseModel):
-    isDisasterMode: bool = Field(..., example=True)
+    isDisasterMode: bool = Field(..., json_schema_extra={"example": True})
 
 
 class SystemModeResponse(BaseModel):

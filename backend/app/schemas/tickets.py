@@ -20,13 +20,13 @@ class AssignedCrew(BaseModel):
 
 
 class TicketCreate(BaseModel):
-    category: str = Field(..., example="Pothole & Craters")
-    title: str = Field(..., example="Severe 15cm Crater on Beach Road")
-    location: str = Field(..., example="Opposite Lawson's Bay Colony Arch")
+    category: str = Field(..., json_schema_extra={"example": "Pothole & Craters"})
+    title: str = Field(..., json_schema_extra={"example": "Severe 15cm Crater on Beach Road"})
+    location: str = Field(..., json_schema_extra={"example": "Opposite Lawson's Bay Colony Arch"})
     coordinates: Coordinates
-    citizenName: str = Field(..., example="Chukka Satya Teja")
-    citizenPhone: str = Field(..., example="+91 98480 12345")
-    severity: str = Field(default="Medium", example="Critical")
+    citizenName: str = Field(..., json_schema_extra={"example": "Chukka Satya Teja"})
+    citizenPhone: str = Field(..., json_schema_extra={"example": "+91 98480 12345"})
+    severity: str = Field(default="Medium", json_schema_extra={"example": "Critical"})
     beforeImageUrl: Optional[str] = None
 
 
@@ -44,17 +44,17 @@ class SpatialDedupCheckResponse(BaseModel):
 
 
 class TicketStageUpdate(BaseModel):
-    stage: str = Field(..., example="in_progress")
+    stage: str = Field(..., json_schema_extra={"example": "in_progress"})
     notes: Optional[str] = None
 
 
 class AssignOfficerRequest(BaseModel):
-    officerId: str = Field(..., example="OFF-01")
-    targetSlaHours: Optional[int] = Field(default=48, example=48)
+    officerId: str = Field(..., json_schema_extra={"example": "OFF-01"})
+    targetSlaHours: Optional[int] = Field(default=48, json_schema_extra={"example": 48})
 
 
 class PhotoAuditRequest(BaseModel):
-    decision: str = Field(..., example="APPROVE")  # APPROVE | REJECT
+    decision: str = Field(..., json_schema_extra={"example": "APPROVE"})  # APPROVE | REJECT
     reason: Optional[str] = None
 
 

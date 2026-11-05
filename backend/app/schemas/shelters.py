@@ -22,4 +22,4 @@ class ShelterResponse(BaseModel):
 
 
 class ShelterOccupancyUpdate(BaseModel):
-    delta: int = Field(..., description="Positive to add occupants, negative to discharge", example=25)
+    delta: int = Field(..., description="Positive to add occupants, negative to discharge", json_schema_extra={"example": 25})

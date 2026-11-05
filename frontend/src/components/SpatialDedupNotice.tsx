@@ -17,25 +17,29 @@ interface SpatialDedupNoticeProps {
   tickets: Ticket[];
   onNavigate: (screen: ScreenId) => void;
   onSelectTicket: (ticketId: string) => void;
+  selectedTicketId?: string;
 }
 
 export const SpatialDedupNotice: React.FC<SpatialDedupNoticeProps> = ({
   tickets,
   onNavigate,
   onSelectTicket,
+  selectedTicketId,
 }) => {
   const [upvoted, setUpvoted] = useState(false);
-  const primaryTicket = tickets[0] || {
-    id: 'TKT-8902',
-    category: 'Pothole & Craters',
-    title: 'Severe 4ft Crater on Beach Road Junction',
-    location: 'Ward 14, Beach Road near RK Beach Circle, Visakhapatnam',
-    coordinates: { latitude: 17.7126, longitude: 83.3218 },
-    reportedAt: '12 Mins Ago',
-    currentStage: 'in_progress',
-    citizenName: 'K. Satyanarayana',
-    mergedCount: 6,
-  };
+  const primaryTicket =
+    (selectedTicketId ? tickets.find((t) => t.id === selectedTicketId) : null) ||
+    tickets[0] || {
+      id: 'TKT-8902',
+      category: 'Pothole & Craters',
+      title: 'Severe 4ft Crater on Beach Road Junction',
+      location: 'Ward 14, Beach Road near RK Beach Circle, Visakhapatnam',
+      coordinates: { latitude: 17.7126, longitude: 83.3218 },
+      reportedAt: '12 Mins Ago',
+      currentStage: 'in_progress',
+      citizenName: 'K. Satyanarayana',
+      mergedCount: 6,
+    };
 
   const nearbyDuplicates = [
     {

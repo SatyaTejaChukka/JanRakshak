@@ -176,8 +176,8 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({ hazard
                 className="cursor-pointer"
                 onClick={() => setSelectedHazardId('HAZ-103')}
               >
-                <circle cx="480" cy="200" r="8" fill="#a855f7" stroke="#fff" strokeWidth="2" />
-                <text x="440" y="225" fill="#d8b4fe" fontSize="10" fontWeight="bold">
+                <circle cx="480" cy="200" r="8" fill="#f97316" stroke="#fff" strokeWidth="2" />
+                <text x="440" y="225" fill="#fed7aa" fontSize="10" fontWeight="bold">
                   HAZ-103 (Fallen Tree)
                 </text>
               </g>

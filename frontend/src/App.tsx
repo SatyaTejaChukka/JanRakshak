@@ -595,6 +595,7 @@ export default function App() {
               tickets={tickets}
               onNavigate={handleNavigate}
               onSelectTicket={setSelectedTicketId}
+              selectedTicketId={selectedTicketId}
             />
           )}
 

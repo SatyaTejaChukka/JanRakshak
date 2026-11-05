@@ -207,13 +207,25 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
               </div>
 
               {/* Card Footer Actions */}
-              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center gap-2">
+              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center gap-1.5">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdateOccupancy(shelter.id, -5);
+                  }}
+                  disabled={shelter.currentOccupants <= 0}
+                  className="py-2 px-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 text-xs font-semibold rounded-lg text-center cursor-pointer"
+                  title="Discharge 5 occupants"
+                >
+                  -5 Out
+                </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onUpdateOccupancy(shelter.id, 10);
                   }}
-                  className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg text-center cursor-pointer"
+                  disabled={shelter.currentOccupants >= shelter.totalCapacity}
+                  className="flex-1 py-2 px-2.5 bg-blue-50 hover:bg-blue-100 disabled:opacity-40 text-blue-700 text-xs font-semibold rounded-lg text-center cursor-pointer border border-blue-200"
                 >
                   +10 Check-In
                 </button>
@@ -222,10 +234,10 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
                     e.stopPropagation();
                     onNavigate('hazard_navigation_map');
                   }}
-                  className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer"
+                  className="flex-1 py-2 px-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <Compass className="w-3.5 h-3.5" />
-                  <span>Navigate Route</span>
+                  <span>Navigate</span>
                 </button>
               </div>
             </div>

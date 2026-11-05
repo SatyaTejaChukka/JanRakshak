@@ -28,7 +28,7 @@ class ElderProfileSchema(BaseModel):
 
 class SOSTriggerRequest(BaseModel):
     elderProfileId: Optional[str] = None
-    triggerType: str = Field(default="ONE_TAP_PANIC", example="ONE_TAP_PANIC")  # VOICE_COMMAND, ONE_TAP_PANIC, 2G_SMS
+    triggerType: str = Field(default="ONE_TAP_PANIC", json_schema_extra={"example": "ONE_TAP_PANIC"})  # VOICE_COMMAND, ONE_TAP_PANIC, 2G_SMS
     coordinates: Optional[Coordinates] = None
     batteryPercentage: Optional[int] = Field(default=85, ge=0, le=100)
 

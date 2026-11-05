@@ -31,16 +31,18 @@ export function checkSpatialDeduplication(
   newPoint: GeoLocation,
   category: string,
   existingReports: Array<{ id: string; location: GeoLocation; category: string; primaryTicketId?: string }>
-): { isDuplicate: boolean; parentTicketId?: string; distanceMeters?: number } {
+): { isDuplicate: boolean; parentTicketId?: string; duplicateId?: string; distanceMeters?: number } {
   const THRESHOLD_METERS = 50;
 
   for (const report of existingReports) {
     if (report.category.toLowerCase() === category.toLowerCase()) {
       const dist = calculateDistanceMeters(newPoint, report.location);
       if (dist <= THRESHOLD_METERS) {
+        const pId = report.primaryTicketId || report.id;
         return {
           isDuplicate: true,
-          parentTicketId: report.primaryTicketId || report.id,
+          parentTicketId: pId,
+          duplicateId: pId,
           distanceMeters: dist,
         };
       }
