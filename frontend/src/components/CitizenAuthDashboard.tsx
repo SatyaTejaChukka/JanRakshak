@@ -156,11 +156,16 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
       );
 
       const citizenUser: UserProfile = {
-        id: res.citizen.id || `USR-${Math.floor(10000 + Math.random() * 90000)}`,
-        fullName: res.citizen.fullName || (authMode === 'REGISTER' ? fullName : 'K. Satyanarayana'),
-        mobileNumber: res.citizen.mobileNumber || `+91 ${mobileNumber}`,
-        aadhaarNumber: res.citizen.aadhaarNumber || (authMode === 'REGISTER' ? aadhaarNumber : 'XXXX-XXXX-1092'),
-        ward: res.citizen.ward || ward,
+        id: res?.citizen?.id || `USR-${Math.floor(10000 + Math.random() * 90000)}`,
+        fullName:
+          res?.citizen?.fullName ||
+          (authMode === 'REGISTER' && fullName.trim() ? fullName.trim() : 'K. Satyanarayana'),
+        mobileNumber:
+          res?.citizen?.mobileNumber || (mobileNumber ? `+91 ${mobileNumber}` : '+91 98480 12345'),
+        aadhaarNumber:
+          res?.citizen?.aadhaarNumber ||
+          (authMode === 'REGISTER' && aadhaarNumber ? aadhaarNumber : '4921 8842 1092'),
+        ward: res?.citizen?.ward || ward || 'Ward 14 (Madhurawada & Coastal Belt)',
         isVerified: true,
         registeredAt: 'Just Now',
       };

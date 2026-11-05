@@ -39,3 +39,4 @@ class AadhaarVerifyResponse(BaseModel):
     token: str = Field(..., description="Session authentication JWT or bearer token")
     citizen: Dict[str, Any] = Field(..., description="Verified citizen profile record")
     message: str = Field(..., description="Informational status message")
+

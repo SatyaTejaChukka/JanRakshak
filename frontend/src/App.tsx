@@ -77,7 +77,20 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     try {
       const saved = localStorage.getItem('janrakshak_citizen_user');
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          id: parsed.id || 'USR-CITIZEN',
+          fullName: parsed.fullName || 'Verified Citizen',
+          mobileNumber: parsed.mobileNumber || '+91 98480 12345',
+          aadhaarNumber: parsed.aadhaarNumber || 'XXXX-XXXX-1092',
+          ward: parsed.ward || 'Ward 14 (Madhurawada & Coastal Belt)',
+          isVerified: Boolean(parsed.isVerified ?? true),
+          registeredAt: parsed.registeredAt || 'Today',
+        };
+      }
+      return null;
     } catch {
       return null;
     }
@@ -286,17 +299,26 @@ export default function App() {
   };
 
   const handleCitizenLogin = (user: UserProfile) => {
+    const sanitizedUser: UserProfile = {
+      id: user?.id || `USR-${Math.floor(10000 + Math.random() * 90000)}`,
+      fullName: user?.fullName || 'Verified Citizen',
+      mobileNumber: user?.mobileNumber || '+91 98480 12345',
+      aadhaarNumber: user?.aadhaarNumber || 'XXXX-XXXX-1092',
+      ward: user?.ward || 'Ward 14 (Madhurawada & Coastal Belt)',
+      isVerified: Boolean(user?.isVerified ?? true),
+      registeredAt: user?.registeredAt || 'Today',
+    };
     try {
-      localStorage.setItem('janrakshak_citizen_user', JSON.stringify(user));
+      localStorage.setItem('janrakshak_citizen_user', JSON.stringify(sanitizedUser));
     } catch {}
-    setCurrentUser(user);
+    setCurrentUser(sanitizedUser);
     setOfficialSession(null);
     setCurrentRole('CITIZEN');
     setCurrentScreen(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal');
     showToast(
       'success',
       'Citizen Authentication Successful',
-      `Welcome, ${user.fullName}. Aadhaar verified session active in ${user.ward}.`
+      `Welcome, ${sanitizedUser.fullName}. Aadhaar verified session active in ${sanitizedUser.ward}.`
     );
   };
 

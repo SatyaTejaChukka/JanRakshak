@@ -150,3 +150,4 @@ async def verify_aadhaar_otp(payload: AadhaarVerifyRequest):
         citizen=citizen_profile,
         message="Aadhaar e-KYC demographic verification authenticated successfully.",
     )
+

@@ -168,24 +168,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Zone: Account Profile + Role Selector + Notifications + Mode Switcher */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* User Account Button (Requirement 1) */}
-            {onOpenAccount && (
-              <button
-                type="button"
-                onClick={onOpenAccount}
-                className="px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                title={currentUser ? `Logged in: ${currentUser.fullName}` : 'Open / Create Citizen Account'}
-              >
-                <User className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span className="hidden md:inline font-bold">
-                  {currentUser ? currentUser.fullName.split(' ')[0] : 'Open Account'}
-                </span>
-                {currentUser && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Aadhaar Verified" />
-                )}
-              </button>
-            )}
-
             {/* Quick Emergency SOS Button in Header */}
             {currentRole === 'CITIZEN' && (
               <button
@@ -376,7 +358,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Mobile dropdown drawer */}
         {isMobileMenuOpen && (
           <div className="lg:hidden py-3 border-t border-slate-100 flex flex-col gap-2.5">
-            {onOpenAccount && (
+            {onOpenAccount && currentRole === 'CITIZEN' && (
               <div className="px-2">
                 <button
                   type="button"
@@ -388,13 +370,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-blue-600" />
-                    <span>{currentUser ? `Account: ${currentUser.fullName}` : 'Open Citizen Account'}</span>
+                    <span>{currentUser?.fullName ? `Profile: ${currentUser.fullName}` : 'Citizen Account Profile'}</span>
                   </div>
-                  {currentUser && (
-                    <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded font-mono">
-                      Verified
-                    </span>
-                  )}
+                  <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded font-mono">
+                    Aadhaar
+                  </span>
                 </button>
               </div>
             )}
