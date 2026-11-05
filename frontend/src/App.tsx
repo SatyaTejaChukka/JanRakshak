@@ -759,14 +759,14 @@ export default function App() {
 
       {/* Real-Time Operational Telemetry Strip */}
       <div
-        className={`px-4 sm:px-6 py-2 border-b text-xs flex flex-wrap items-center justify-between gap-3 transition-colors ${
+        className={`px-4 sm:px-6 py-2 border-b text-xs flex flex-wrap items-center justify-between gap-3 transition-colors shadow-2xs font-mono ${
           isDisasterMode
-            ? 'bg-red-900 text-red-100 border-red-800'
+            ? 'bg-red-950/95 text-red-100 border-red-800/80 backdrop-blur-md'
             : currentRole === 'GVMC_ADMIN'
-            ? 'bg-blue-950 text-blue-100 border-blue-900'
+            ? 'bg-slate-950 text-blue-100 border-slate-800 backdrop-blur-md'
             : currentRole === 'NDRF_ADMIN'
-            ? 'bg-slate-950 text-amber-200 border-slate-800'
-            : 'bg-slate-900 text-slate-200 border-slate-800'
+            ? 'bg-slate-950 text-amber-200 border-slate-800 backdrop-blur-md'
+            : 'bg-slate-900/95 text-slate-200 border-slate-800 backdrop-blur-md'
         }`}
       >
         <div className="flex items-center gap-3">
@@ -1155,16 +1155,16 @@ export default function App() {
         onLogout={handleCitizenLogout}
       />
 
-      {/* Mobile Sticky Bottom Navigation Bar (High contrast GovTech Touch Targets) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl flex items-center justify-around py-1.5 px-1">
+      {/* Mobile Sticky Bottom Floating Navigation Dock */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 shadow-xl flex items-center justify-around py-2 px-2 font-sans">
         {currentRole === 'CITIZEN' && (
           <>
             <button
               onClick={() => handleNavigate(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
                 currentScreen === 'citizen_home_normal' || currentScreen === 'citizen_home_disaster'
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-600'
+                  ? 'text-blue-600 bg-blue-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Home className="w-4 h-4" />
@@ -1173,8 +1173,10 @@ export default function App() {
 
             <button
               onClick={() => handleNavigate('camera_defect_capture')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
-                currentScreen === 'camera_defect_capture' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                currentScreen === 'camera_defect_capture'
+                  ? 'text-blue-600 bg-blue-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Camera className="w-4 h-4" />
@@ -1183,8 +1185,10 @@ export default function App() {
 
             <button
               onClick={() => handleNavigate('public_ticket_stepper')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
-                currentScreen === 'public_ticket_stepper' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                currentScreen === 'public_ticket_stepper'
+                  ? 'text-blue-600 bg-blue-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />
@@ -1193,8 +1197,10 @@ export default function App() {
 
             <button
               onClick={() => handleNavigate('hazard_navigation_map')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
-                currentScreen === 'hazard_navigation_map' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                currentScreen === 'hazard_navigation_map'
+                  ? 'text-blue-600 bg-blue-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Compass className="w-4 h-4" />
@@ -1203,9 +1209,9 @@ export default function App() {
 
             <button
               onClick={() => handleNavigate('elder_sos_trigger')}
-              className="flex flex-col items-center gap-0.5 text-[10px] font-bold py-1 px-2.5 rounded-lg text-red-600 bg-red-50 border border-red-200 active:scale-95 transition-transform cursor-pointer"
+              className="flex flex-col items-center gap-1 text-[10px] font-black py-1 px-3 rounded-xl text-white bg-gradient-to-r from-red-600 to-rose-600 shadow-sm active:scale-95 transition-transform cursor-pointer border border-red-500 glow-red"
             >
-              <AlertOctagon className="w-4 h-4 text-red-600 animate-pulse" />
+              <AlertOctagon className="w-4 h-4 text-yellow-300 animate-pulse" />
               <span>SOS Alert</span>
             </button>
           </>
@@ -1215,8 +1221,10 @@ export default function App() {
           <>
             <button
               onClick={() => handleNavigate('gvmc_admin_dashboard')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
-                currentScreen === 'gvmc_admin_dashboard' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                currentScreen === 'gvmc_admin_dashboard'
+                  ? 'text-blue-600 bg-blue-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Building2 className="w-4 h-4" />
@@ -1225,8 +1233,10 @@ export default function App() {
 
             <button
               onClick={() => handleNavigate('hazard_navigation_map')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
-                currentScreen === 'hazard_navigation_map' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                currentScreen === 'hazard_navigation_map'
+                  ? 'text-blue-600 bg-blue-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Compass className="w-4 h-4" />
@@ -1235,8 +1245,10 @@ export default function App() {
 
             <button
               onClick={() => handleNavigate('public_ticket_stepper')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
-                currentScreen === 'public_ticket_stepper' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                currentScreen === 'public_ticket_stepper'
+                  ? 'text-blue-600 bg-blue-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />
@@ -1249,8 +1261,10 @@ export default function App() {
           <>
             <button
               onClick={() => handleNavigate('ndrf_dispatcher_dashboard')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
-                currentScreen === 'ndrf_dispatcher_dashboard' ? 'text-amber-700 font-bold' : 'text-slate-600'
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                currentScreen === 'ndrf_dispatcher_dashboard'
+                  ? 'text-amber-700 bg-amber-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Radio className="w-4 h-4" />
@@ -1259,8 +1273,10 @@ export default function App() {
 
             <button
               onClick={() => handleNavigate('ndrf_volunteer_hub')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
-                currentScreen === 'ndrf_volunteer_hub' ? 'text-amber-700 font-bold' : 'text-slate-600'
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                currentScreen === 'ndrf_volunteer_hub'
+                  ? 'text-amber-700 bg-amber-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Users className="w-4 h-4" />
@@ -1269,8 +1285,10 @@ export default function App() {
 
             <button
               onClick={() => handleNavigate('volunteer_proximity')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
-                currentScreen === 'volunteer_proximity' ? 'text-amber-700 font-bold' : 'text-slate-600'
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                currentScreen === 'volunteer_proximity'
+                  ? 'text-amber-700 bg-amber-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <HeartHandshake className="w-4 h-4" />
@@ -1279,8 +1297,10 @@ export default function App() {
 
             <button
               onClick={() => handleNavigate('cyclone_shelter_capacity')}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
-                currentScreen === 'cyclone_shelter_capacity' ? 'text-amber-700 font-bold' : 'text-slate-600'
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                currentScreen === 'cyclone_shelter_capacity'
+                  ? 'text-amber-700 bg-amber-50/80 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <LifeBuoy className="w-4 h-4" />
@@ -1289,9 +1309,9 @@ export default function App() {
 
             <button
               onClick={() => handleNavigate('elder_sos_trigger')}
-              className="flex flex-col items-center gap-0.5 text-[10px] font-bold py-1 px-2.5 rounded-lg text-red-600 bg-red-50 border border-red-200 active:scale-95 transition-transform cursor-pointer"
+              className="flex flex-col items-center gap-1 text-[10px] font-black py-1 px-3 rounded-xl text-white bg-gradient-to-r from-red-600 to-rose-600 shadow-sm active:scale-95 transition-transform cursor-pointer border border-red-500 glow-red"
             >
-              <AlertOctagon className="w-4 h-4 text-red-600 animate-pulse" />
+              <AlertOctagon className="w-4 h-4 text-yellow-300 animate-pulse" />
               <span>SOS Alert</span>
             </button>
           </>
