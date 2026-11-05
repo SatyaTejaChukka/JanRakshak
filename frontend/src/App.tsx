@@ -44,6 +44,8 @@ import { CycloneReliefShelter } from './components/CycloneReliefShelter';
 import { GVMCAdminDashboard } from './components/GVMCAdminDashboard';
 import { NDRFVolunteerManagement } from './components/NDRFVolunteerManagement';
 import { VolunteerInterestForm } from './components/VolunteerInterestForm';
+import { CitizenAuthDashboard } from './components/CitizenAuthDashboard';
+import { OfficialPersonnelAuth } from './components/OfficialPersonnelAuth';
 import { JanRakshakAPI } from './services/api';
 import {
   Home,
@@ -68,11 +70,69 @@ import {
   X,
   Info,
   Check,
+  LogOut,
 } from 'lucide-react';
 
 export default function App() {
-  const [currentRole, setCurrentRole] = useState<UserRole>('CITIZEN');
-  const [currentScreen, setCurrentScreen] = useState<ScreenId>('citizen_home_normal');
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem('janrakshak_citizen_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [officialSession, setOfficialSession] = useState<{
+    role: UserRole;
+    name: string;
+    id: string;
+    designation: string;
+  } | null>(() => {
+    try {
+      const saved = localStorage.getItem('janrakshak_official_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [showOfficialPortal, setShowOfficialPortal] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return (
+        window.location.search.includes('portal=official') ||
+        window.location.search.includes('admin=true') ||
+        window.location.hash === '#official'
+      );
+    }
+    return false;
+  });
+
+  const [currentRole, setCurrentRole] = useState<UserRole>(() => {
+    try {
+      const official = localStorage.getItem('janrakshak_official_session');
+      if (official) {
+        const parsed = JSON.parse(official);
+        if (parsed.role === 'GVMC_ADMIN' || parsed.role === 'NDRF_ADMIN') {
+          return parsed.role;
+        }
+      }
+    } catch {}
+    return 'CITIZEN';
+  });
+
+  const [currentScreen, setCurrentScreen] = useState<ScreenId>(() => {
+    try {
+      const official = localStorage.getItem('janrakshak_official_session');
+      if (official) {
+        const parsed = JSON.parse(official);
+        if (parsed.role === 'GVMC_ADMIN') return 'gvmc_admin_dashboard';
+        if (parsed.role === 'NDRF_ADMIN') return 'ndrf_dispatcher_dashboard';
+      }
+    } catch {}
+    return 'citizen_home_normal';
+  });
+
   const [isDisasterMode, setIsDisasterMode] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   
@@ -106,15 +166,6 @@ export default function App() {
   const [municipalOfficers, setMunicipalOfficers] = useState<MunicipalOfficer[]>(
     INITIAL_MUNICIPAL_OFFICERS
   );
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>({
-    id: 'USR-88219',
-    fullName: 'Chukka Satya Teja',
-    mobileNumber: '+91 98480 12345',
-    aadhaarNumber: '4921 8842 1092',
-    ward: 'Ward 14 (Madhurawada & Coastal)',
-    isVerified: true,
-    registeredAt: 'Today',
-  });
   const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
 
   // Synchronize state with backend API on mount
@@ -232,6 +283,69 @@ export default function App() {
       showToast('info', 'Switched Persona', 'Citizen Public Portal');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCitizenLogin = (user: UserProfile) => {
+    try {
+      localStorage.setItem('janrakshak_citizen_user', JSON.stringify(user));
+    } catch {}
+    setCurrentUser(user);
+    setOfficialSession(null);
+    setCurrentRole('CITIZEN');
+    setCurrentScreen(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal');
+    showToast(
+      'success',
+      'Citizen Authentication Successful',
+      `Welcome, ${user.fullName}. Aadhaar verified session active in ${user.ward}.`
+    );
+  };
+
+  const handleCitizenLogout = () => {
+    try {
+      localStorage.removeItem('janrakshak_citizen_user');
+    } catch {}
+    setCurrentUser(null);
+    setIsAccountModalOpen(false);
+    setCurrentScreen('citizen_home_normal');
+    showToast(
+      'info',
+      'Signed Out',
+      'You have signed out of your JanRakshak Citizen account.'
+    );
+  };
+
+  const handleOfficialLogin = (
+    role: UserRole,
+    officerDetails: { name: string; id: string; designation: string }
+  ) => {
+    const session = { role, ...officerDetails };
+    try {
+      localStorage.setItem('janrakshak_official_session', JSON.stringify(session));
+    } catch {}
+    setOfficialSession(session);
+    setCurrentUser(null);
+    setCurrentRole(role);
+    setCurrentScreen(role === 'GVMC_ADMIN' ? 'gvmc_admin_dashboard' : 'ndrf_dispatcher_dashboard');
+    showToast(
+      'success',
+      'Security Clearance Granted',
+      `${officerDetails.name} (${officerDetails.designation}) authenticated.`
+    );
+  };
+
+  const handleOfficialLogout = () => {
+    try {
+      localStorage.removeItem('janrakshak_official_session');
+    } catch {}
+    setOfficialSession(null);
+    setCurrentRole('CITIZEN');
+    setShowOfficialPortal(false);
+    setCurrentScreen('citizen_home_normal');
+    showToast(
+      'info',
+      'Official Session Terminated',
+      'Terminal closed. Returned to public citizen interface.'
+    );
   };
 
   const handleToggleDisasterMode = (enabled: boolean) => {
@@ -478,22 +592,72 @@ export default function App() {
         title: 'DISASTER & LIFE SAFETY',
         items: [
           { id: 'citizen_home_disaster' as ScreenId, label: 'Disaster Hub', icon: Flame, count: 'RED' },
+          { id: 'cyclone_shelter_capacity' as ScreenId, label: 'Relief Shelters Status', icon: LifeBuoy, count: '18 Active' },
           { id: 'elder_sos_trigger' as ScreenId, label: 'Emergency Elder SOS', icon: AlertOctagon, count: 'URGENT' },
           { id: 'volunteer_proximity' as ScreenId, label: 'Volunteer Radar', icon: Users, count: '<500m' },
           { id: 'elder_profile_setup' as ScreenId, label: 'Vulnerability Registry', icon: User, count: null },
         ],
       },
       {
-        title: 'TACTICAL COMMAND & GIS',
+        title: 'NAVIGATION & COMMUNITY',
         items: [
-          { id: 'hazard_navigation_map' as ScreenId, label: 'Hazard Detour Map', icon: Compass, count: 'Avoid' },
-          { id: 'district_collector_switcher' as ScreenId, label: 'Collector Override', icon: ShieldCheck, count: 'IAS' },
+          { id: 'hazard_navigation_map' as ScreenId, label: 'Safe Evacuation GIS', icon: Compass, count: 'Live' },
+          { id: 'volunteer_interest_form' as ScreenId, label: 'Join Volunteer Corps', icon: HeartHandshake, count: 'Enlist' },
         ],
       },
     ];
   };
 
   const navigationGroups = getNavigationGroups();
+
+  // Authentication Boundary: Enforce Public Citizen Login or Official Terminal
+  if (!currentUser && !officialSession) {
+    if (showOfficialPortal) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+          {toasts.length > 0 && (
+            <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+              {toasts.map((t) => (
+                <div
+                  key={t.id}
+                  className="pointer-events-auto p-3.5 rounded-xl border bg-slate-900/95 border-amber-500/50 text-slate-100 shadow-xl"
+                >
+                  <span className="font-bold block text-xs">{t.title}</span>
+                  <span className="text-[11px] text-slate-300 block mt-0.5">{t.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <OfficialPersonnelAuth
+            onOfficialLogin={handleOfficialLogin}
+            onReturnToPublic={() => setShowOfficialPortal(false)}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+        {toasts.length > 0 && (
+          <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+            {toasts.map((t) => (
+              <div
+                key={t.id}
+                className="pointer-events-auto p-3.5 rounded-xl border bg-slate-900/95 border-blue-500/50 text-slate-100 shadow-xl"
+              >
+                <span className="font-bold block text-xs">{t.title}</span>
+                <span className="text-[11px] text-slate-300 block mt-0.5">{t.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <CitizenAuthDashboard
+          onCitizenLogin={handleCitizenLogin}
+          onOpenOfficialPortal={() => setShowOfficialPortal(true)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
@@ -508,6 +672,7 @@ export default function App() {
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         currentUser={currentUser}
         onOpenAccount={() => setIsAccountModalOpen(true)}
+        onLogout={currentRole === 'CITIZEN' ? handleCitizenLogout : handleOfficialLogout}
       />
 
       {/* Real-Time Operational Telemetry Strip */}
@@ -558,7 +723,9 @@ export default function App() {
             <span className="text-slate-400">PostGIS ST_DWithin(50m) Active</span>
           )}
           <span className="bg-white/10 px-2 py-0.5 rounded font-bold">
-            ROLE: {currentRole}
+            {currentRole === 'CITIZEN'
+              ? 'AADHAAR VERIFIED CITIZEN'
+              : `OFFICIAL CLEARANCE: ${officialSession?.id || currentRole}`}
           </span>
         </div>
       </div>
@@ -572,42 +739,67 @@ export default function App() {
           }`}
           aria-label="Desktop application navigation"
         >
-          {/* Active Role Card in Sidebar */}
-          <div className="p-3.5 m-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
-                  currentRole === 'GVMC_ADMIN'
-                    ? 'bg-blue-600 text-white'
-                    : currentRole === 'NDRF_ADMIN'
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-slate-700 text-white'
-                }`}
-              >
-                {currentRole === 'GVMC_ADMIN' ? (
-                  <Building2 className="w-4 h-4" />
-                ) : currentRole === 'NDRF_ADMIN' ? (
-                  <ShieldAlert className="w-4 h-4" />
-                ) : (
+          {/* Active Citizen Identity / Official Terminal Card in Sidebar */}
+          {currentRole === 'CITIZEN' ? (
+            <div className="p-3.5 m-3 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
                   <User className="w-4 h-4" />
-                )}
-              </div>
-              <div className="leading-tight">
-                <div className="text-[11px] font-bold text-slate-800">
-                  {currentRole === 'GVMC_ADMIN'
-                    ? 'GVMC Works Admin'
-                    : currentRole === 'NDRF_ADMIN'
-                    ? 'NDRF Officer'
-                    : 'Citizen Public'}
                 </div>
-                <div className="text-[10px] text-slate-400 font-mono">Current Persona</div>
+                <div className="leading-tight min-w-0">
+                  <div className="text-xs font-bold text-slate-900 truncate">
+                    {currentUser?.fullName || 'Verified Citizen'}
+                  </div>
+                  <div className="text-[10px] text-emerald-700 font-mono font-medium flex items-center gap-1 mt-0.5">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                    <span>Aadhaar Verified</span>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <span className="text-[10px] font-mono font-bold bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-600">
-              Active
-            </span>
-          </div>
+              <button
+                type="button"
+                onClick={handleCitizenLogout}
+                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-colors cursor-pointer shrink-0 border border-transparent hover:border-slate-200"
+                title="Sign Out of Citizen Portal"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="p-3.5 m-3 rounded-xl bg-slate-900 border border-slate-800 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                    currentRole === 'GVMC_ADMIN' ? 'bg-blue-600 text-white' : 'bg-amber-600 text-white'
+                  }`}
+                >
+                  {currentRole === 'GVMC_ADMIN' ? (
+                    <Building2 className="w-4 h-4" />
+                  ) : (
+                    <ShieldAlert className="w-4 h-4" />
+                  )}
+                </div>
+                <div className="leading-tight min-w-0">
+                  <div className="text-xs font-bold text-white truncate">
+                    {officialSession?.name || (currentRole === 'GVMC_ADMIN' ? 'GVMC Works Admin' : 'NDRF Officer')}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono truncate">
+                    {officialSession?.designation || 'Official Terminal'}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleOfficialLogout}
+                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer shrink-0"
+                title="Exit Official Terminal"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           <div className="p-4 flex-1 overflow-y-auto space-y-6">
             {navigationGroups.map((group) => (
@@ -853,18 +1045,19 @@ export default function App() {
         </main>
       </div>
 
-      {/* User Account / Create Account Modal (Requirement 1) */}
+      {/* User Account / Citizen Profile Modal */}
       <UserAccountModal
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
         currentUser={currentUser}
         onSaveUser={(user) => {
+          try {
+            localStorage.setItem('janrakshak_citizen_user', JSON.stringify(user));
+          } catch {}
           setCurrentUser(user);
           setIsAccountModalOpen(false);
         }}
-        onLogout={() => {
-          setCurrentUser(null);
-        }}
+        onLogout={handleCitizenLogout}
       />
 
       {/* Mobile Sticky Bottom Navigation Bar (High contrast GovTech Touch Targets) */}
