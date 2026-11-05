@@ -376,5 +376,3 @@ dist/assets/index.js            719.96 kB │ gzip: 186.70 kB
 
 ---
 
-## 📄 License
-This project is licensed under the **MIT License** — feel free to use, modify, and build upon this platform for public safety and civic innovation.
