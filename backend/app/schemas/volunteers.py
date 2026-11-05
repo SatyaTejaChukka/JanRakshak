@@ -17,6 +17,7 @@ class VolunteerApplicationCreate(BaseModel):
     equipmentAvailable: List[str] = Field(default=[], json_schema_extra={"example": ["Inflatable Raft", "2x Life Jackets"]})
     availability: str = Field(default="Immediate (24x7)", json_schema_extra={"example": "Immediate (24x7)"})
     bloodGroup: str = Field(default="O+", json_schema_extra={"example": "O+"})
+    userId: Optional[str] = None
 
 
 class VolunteerApplicationResponse(BaseModel):
@@ -34,6 +35,7 @@ class VolunteerApplicationResponse(BaseModel):
     status: str
     appliedAt: str
     reviewedBy: Optional[str] = None
+    userId: Optional[str] = None
 
 
 class DirectVolunteerCreate(BaseModel):
