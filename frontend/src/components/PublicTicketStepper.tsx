@@ -56,13 +56,13 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
   // Effective ticket to display:
   // If user selected a ticket and it exists, use it.
   // Else if user has filed tickets, display their most recent ticket.
-  // Otherwise null (indicates a new user with 0 complaints).
+  // Otherwise null (indicates a user with 0 complaints).
   const effectiveTicket: Ticket | null =
     propTicket && isOwner
       ? propTicket
       : userTickets.length > 0
       ? userTickets[0]
-      : propTicket || null;
+      : null;
 
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
@@ -323,7 +323,7 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
               onClick={() => onNavigate('citizen_home_normal')}
               className="w-full sm:w-auto px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-colors cursor-pointer"
             >
-              Explore Public Ward Feed ({allTickets.length})
+              Back to Home
             </button>
           </div>
         </div>
@@ -332,7 +332,7 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
   }
 
   const ticket = effectiveTicket;
-  const activeStage = stageIndexMap[ticket.currentStage] || 3;
+  const activeStage = stageIndexMap[ticket.currentStage] || 1;
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5">
@@ -348,37 +348,18 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md">
-            {isOwner ? 'MY CIVIC SLA TRACKER' : 'PUBLIC SLA TRACKER'} · 4-HOUR GUARANTEE
+            MY CIVIC SLA TRACKER · 4-HOUR GUARANTEE
           </span>
         </div>
       </div>
 
       {/* Ticket Ownership & Source Badge */}
-      {!isOwner ? (
-        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-medium">
-          <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>
-              Viewing Public Ward 14 Report (Filed by <strong>{ticket.citizenName}</strong>).
-            </span>
-          </div>
-          {userTickets.length > 0 && onSelectTicket && (
-            <button
-              onClick={() => onSelectTicket(userTickets[0].id)}
-              className="text-xs font-bold text-blue-700 underline shrink-0 hover:text-blue-900 cursor-pointer self-end sm:self-center"
-            >
-              Switch to My Reports ({userTickets.length})
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl px-4 py-2 text-xs flex items-center gap-2 font-medium">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>
-            Your Registered Report: <strong>{ticket.id}</strong> · Logged under {ticket.citizenPhone} with GPS proof.
-          </span>
-        </div>
-      )}
+      <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl px-4 py-2 text-xs flex items-center gap-2 font-medium">
+        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <span>
+          Your Registered Report: <strong>{ticket.id}</strong> · Logged under {ticket.citizenPhone} with GPS proof.
+        </span>
+      </div>
 
       {/* User's Multiple Tickets Selector Pill Bar */}
       {userTickets.length > 1 && (
@@ -440,16 +421,26 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
 
         {/* Stage Status Badge */}
         <div className="flex items-center">
-          <span className="bg-amber-50 text-amber-900 border border-amber-200 font-mono font-bold text-[11px] px-3 py-1 rounded-full flex items-center gap-2 shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+          <span className={`font-mono font-bold text-[11px] px-3 py-1 rounded-full flex items-center gap-2 shadow-2xs ${
+            activeStage === 1
+              ? 'bg-blue-50 text-blue-900 border border-blue-200'
+              : activeStage === 2
+              ? 'bg-indigo-50 text-indigo-900 border border-indigo-200'
+              : activeStage === 3
+              ? 'bg-amber-50 text-amber-900 border border-amber-200'
+              : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${activeStage === 3 ? 'bg-amber-500 animate-pulse' : activeStage === 1 ? 'bg-blue-500' : 'bg-emerald-500'}`} />
             <span>
-              {activeStage === 3
-                ? 'WORK IN PROGRESS (STAGE 3 OF 5)'
+              {activeStage === 1
+                ? 'SUBMITTED & PENDING ASSIGNMENT (STAGE 1 OF 5)'
+                : activeStage === 2
+                ? 'OFFICER ASSIGNED & DISPATCHED (STAGE 2 OF 5)'
+                : activeStage === 3
+                ? 'ON-SITE WORK IN PROGRESS (STAGE 3 OF 5)'
                 : activeStage === 4
-                ? 'COMPLETED — AWAITING AUDIT (STAGE 4 OF 5)'
-                : activeStage === 5
-                ? 'RESOLVED & VERIFIED (STAGE 5 OF 5)'
-                : `TRIAGED & ASSIGNED (STAGE ${activeStage} OF 5)`}
+                ? 'REPAIR COMPLETED — AWAITING AUDIT (STAGE 4 OF 5)'
+                : 'RESOLVED & VERIFIED (STAGE 5 OF 5)'}
             </span>
           </span>
         </div>
@@ -501,19 +492,28 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
         {/* Assigned Squad Card */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
+            <div className={`w-10 h-10 rounded-xl ${ticket.assignedCrew ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'} flex items-center justify-center shrink-0`}>
               <HardHat className="w-5 h-5" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-mono uppercase text-slate-400 font-bold">Assigned Unit</p>
               <p className="text-xs font-bold text-slate-900 truncate">
-                {ticket.assignedCrew?.workerName || 'APEPDCL Line Crew & GVMC Squad #4'}
+                {ticket.assignedCrew?.workerName || 'Pending Officer Assignment'}
+              </p>
+              <p className="text-[11px] text-slate-500 truncate">
+                {ticket.assignedCrew
+                  ? `${ticket.assignedCrew.unitId} · ${ticket.assignedCrew.phone}`
+                  : 'Awaiting GVMC Ward Dispatcher Allocation'}
               </p>
             </div>
           </div>
 
-          <span className="bg-white border border-slate-200 text-emerald-800 font-mono font-bold text-xs px-3 py-1 rounded-full shrink-0 shadow-2xs">
-            SLA: 45m Remaining
+          <span className={`border font-mono font-bold text-xs px-3 py-1 rounded-full shrink-0 shadow-2xs ${
+            ticket.assignedCrew
+              ? 'bg-white border-slate-200 text-emerald-800'
+              : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}>
+            {ticket.assignedCrew ? (ticket.assignedCrew.checkedInTime || 'Assigned Crew') : 'Pending Triage'}
           </span>
         </div>
       </div>
@@ -596,98 +596,160 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 w-full space-y-1">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-slate-900">Stage 1 — Considered & Clustered</h3>
-                <span className="text-[11px] font-mono text-slate-400">2:16 PM</span>
+                <span className="text-[11px] font-mono text-slate-400">{ticket.reportedAt}</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Auto-verified via RTK GPS. Merged {ticket.mergedCount * 5 || 15} duplicate community calls into Master Work Order #{ticket.id}.
+                Auto-verified via RTK GPS ({ticket.coordinates.latitude.toFixed(4)}° N, {ticket.coordinates.longitude.toFixed(4)}° E). Master work order #{ticket.id} logged under {ticket.citizenPhone}.
               </p>
             </div>
           </div>
 
           {/* Stage 2: Assigned Staff */}
-          <div className="relative flex items-start gap-3">
-            <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-              <Check className="w-3.5 h-3.5 stroke-[3]" />
-            </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 w-full space-y-1">
+          <div className={`relative flex items-start gap-3 ${activeStage < 2 ? 'opacity-60' : ''}`}>
+            {activeStage >= 2 && ticket.assignedCrew ? (
+              <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+              </div>
+            ) : (
+              <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+              </div>
+            )}
+            <div className={`rounded-xl p-3.5 w-full space-y-1 ${
+              activeStage === 2 ? 'bg-indigo-50/80 border border-indigo-200' : 'bg-slate-50 border border-slate-200'
+            }`}>
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-900">Stage 2 — Assigned Staff</h3>
-                <span className="text-[11px] font-mono text-slate-400">2:20 PM</span>
+                <h3 className={`text-xs font-bold ${activeStage === 2 ? 'text-indigo-900' : 'text-slate-900'}`}>
+                  Stage 2 — Assigned Staff
+                </h3>
+                <span className="text-[11px] font-mono text-slate-400">
+                  {ticket.assignedCrew ? (ticket.assignedCrew.checkedInTime || 'Assigned') : 'Pending Dispatch'}
+                </span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Assigned to Er. K. Ramesh Naidu (APEPDCL & GVMC Civil Task Force). Target resolution SLA: 45 Mins.
+                {ticket.assignedCrew
+                  ? `Assigned to ${ticket.assignedCrew.workerName} (${ticket.assignedCrew.unitId}). Contact: ${ticket.assignedCrew.phone}.`
+                  : 'Pending allocation. Awaiting GVMC Municipal Engineer / Dispatcher to assign ward field crew.'}
               </p>
             </div>
           </div>
 
-          {/* Stage 3: Work In Progress (ACTIVE) */}
-          <div className="relative flex items-start gap-3">
-            <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs">
-              <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
-            </div>
-            <div className="bg-blue-50/80 border border-blue-300 rounded-xl p-3.5 w-full space-y-3 shadow-xs">
+          {/* Stage 3: Work In Progress */}
+          <div className={`relative flex items-start gap-3 ${activeStage < 3 ? 'opacity-60' : ''}`}>
+            {activeStage === 3 ? (
+              <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+              </div>
+            ) : activeStage > 3 ? (
+              <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+              </div>
+            ) : (
+              <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+              </div>
+            )}
+            <div className={`rounded-xl p-3.5 w-full space-y-3 ${
+              activeStage === 3
+                ? 'bg-blue-50/80 border border-blue-300 shadow-xs'
+                : 'bg-slate-50 border border-slate-200'
+            }`}>
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-blue-900">Stage 3 — Work In Progress</h3>
-                <span className="text-[11px] font-mono font-bold text-blue-700">2:45 PM (Active)</span>
+                <h3 className={`text-xs font-bold ${activeStage === 3 ? 'text-blue-900' : 'text-slate-900'}`}>
+                  Stage 3 — Work In Progress
+                </h3>
+                <span className={`text-[11px] font-mono ${activeStage === 3 ? 'font-bold text-blue-700' : 'text-slate-400'}`}>
+                  {activeStage === 3 ? 'Active Execution' : activeStage > 3 ? 'Executed' : 'Upcoming'}
+                </span>
               </div>
               <p className="text-xs text-slate-700 leading-relaxed">
-                Crew checked in on-site with hydraulic chainsaws & crane tender. 11kV electrical grid isolation complete.
+                {activeStage >= 3
+                  ? 'Field repair squad checked in on-site. Real repair and restoration operations underway.'
+                  : 'Awaiting field crew on-site GPS check-in and deployment of repair machinery.'}
               </p>
 
-              {/* Micro Geo-Proof Thumbnail (Real User/Crew Image Only) */}
-              <div className="flex items-center gap-3 bg-white p-2.5 rounded-lg border border-blue-200 shadow-2xs">
-                {ticket.afterImageUrl || ticket.beforeImageUrl ? (
+              {/* Micro Geo-Proof Thumbnail (Real User/Crew Image Only if active or completed) */}
+              {activeStage >= 3 && (ticket.afterImageUrl || ticket.beforeImageUrl) && (
+                <div className="flex items-center gap-3 bg-white p-2.5 rounded-lg border border-blue-200 shadow-2xs">
                   <img
                     src={ticket.afterImageUrl || ticket.beforeImageUrl}
                     alt="Crew Check-in proof"
                     className="w-12 h-12 rounded-lg object-cover shrink-0 border border-slate-200"
                   />
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 shrink-0">
-                    <Camera className="w-6 h-6" />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-bold text-blue-900 block truncate">
+                      GPS Evidence Attached
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono block">
+                      Lat {ticket.coordinates.latitude.toFixed(4)}° N, Lon {ticket.coordinates.longitude.toFixed(4)}° E
+                    </span>
                   </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <span className="text-xs font-bold text-blue-900 block truncate">
-                    Crew Check-In Verified
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-mono block">
-                    Lat {ticket.coordinates.latitude.toFixed(4)}° N, Lon {ticket.coordinates.longitude.toFixed(4)}° E
-                  </span>
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                 </div>
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Stage 4: Completed (Upcoming) */}
-          <div className="relative flex items-start gap-3 opacity-60">
-            <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center">
-              <span className="w-2 h-2 rounded-full bg-slate-400" />
-            </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 w-full space-y-1">
+          {/* Stage 4: Completed & Photo Proof */}
+          <div className={`relative flex items-start gap-3 ${activeStage < 4 ? 'opacity-60' : ''}`}>
+            {activeStage === 4 ? (
+              <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+              </div>
+            ) : activeStage > 4 ? (
+              <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+              </div>
+            ) : (
+              <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+              </div>
+            )}
+            <div className={`rounded-xl p-3.5 w-full space-y-1 ${
+              activeStage === 4 ? 'bg-blue-50/80 border border-blue-300' : 'bg-slate-50 border border-slate-200'
+            }`}>
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-700">Stage 4 — Completed</h3>
-                <span className="text-[11px] font-mono text-slate-400">Est. 3:30 PM</span>
+                <h3 className={`text-xs font-bold ${activeStage === 4 ? 'text-blue-900' : 'text-slate-700'}`}>
+                  Stage 4 — Completed &amp; Proof Attached
+                </h3>
+                <span className="text-[11px] font-mono text-slate-400">
+                  {activeStage >= 4 ? 'Proof Uploaded' : 'Post Execution'}
+                </span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Awaiting geo-tagged AFTER photo from crew inside 40m perimeter to prove road clearance.
+                {activeStage >= 4
+                  ? 'Field repair completed. Geo-tagged AFTER photograph submitted for municipal audit.'
+                  : 'Awaiting geo-tagged AFTER photo from crew inside 40m perimeter to prove road clearance.'}
               </p>
             </div>
           </div>
 
-          {/* Stage 5: Citizen Peer Verified (Upcoming) */}
-          <div className="relative flex items-start gap-3 opacity-60">
-            <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center">
-              <span className="w-2 h-2 rounded-full bg-slate-400" />
-            </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 w-full space-y-1">
+          {/* Stage 5: Citizen Peer Verified & Closed */}
+          <div className={`relative flex items-start gap-3 ${activeStage < 5 ? 'opacity-60' : ''}`}>
+            {activeStage === 5 ? (
+              <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+              </div>
+            ) : (
+              <div className="absolute -left-7 top-0 w-6 h-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+              </div>
+            )}
+            <div className={`rounded-xl p-3.5 w-full space-y-1 ${
+              activeStage === 5 ? 'bg-emerald-50 border border-emerald-300' : 'bg-slate-50 border border-slate-200'
+            }`}>
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-700">Stage 5 — Citizen Peer Verified</h3>
-                <span className="text-[11px] font-mono text-slate-400">Post Completion</span>
+                <h3 className={`text-xs font-bold ${activeStage === 5 ? 'text-emerald-900' : 'text-slate-700'}`}>
+                  Stage 5 — Citizen Peer Verified &amp; Closed
+                </h3>
+                <span className="text-[11px] font-mono text-slate-400">
+                  {activeStage === 5 ? 'Verified' : 'Final Stage'}
+                </span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Community confirmation vote threshold unlocks formal municipal audit ledger archive.
+                {activeStage === 5
+                  ? 'Resolution audit approved and certified by GVMC Municipal Authority.'
+                  : 'Post-completion community confirmation and formal municipal audit ledger archive.'}
               </p>
             </div>
           </div>

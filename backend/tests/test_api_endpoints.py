@@ -365,4 +365,90 @@ def test_emergency_broadcast_and_incidents():
     assert matched["coordinates"]["latitude"] == test_lat
 
 
+def test_user_data_isolation():
+    """Verify each user only gets their own tickets, preventing cross-user data leakage."""
+    # Create ticket for User A
+    user_a_payload = {
+        "category": "Pothole & Craters",
+        "title": "User A Road Pothole",
+        "location": "Ward 14 Beach Road",
+        "coordinates": {"latitude": 17.7500, "longitude": 83.3500},
+        "citizenName": "User Alpha",
+        "citizenPhone": "+91 98480 11111",
+        "userId": "USR-ALPHA",
+        "severity": "Medium",
+    }
+    res_a = client.post("/api/v1/tickets", json=user_a_payload)
+    assert res_a.status_code == 201
+    ticket_a = res_a.json()
+    assert ticket_a["currentStage"] == "submitted"
+    assert ticket_a["assignedCrew"] is None
+    assert ticket_a["userId"] == "USR-ALPHA"
+
+    # Create ticket for User B
+    user_b_payload = {
+        "category": "Drainage Block",
+        "title": "User B Drainage Problem",
+        "location": "Ward 10 MVP Colony",
+        "coordinates": {"latitude": 17.7600, "longitude": 83.3600},
+        "citizenName": "User Beta",
+        "citizenPhone": "+91 98480 22222",
+        "userId": "USR-BETA",
+        "severity": "High",
+    }
+    res_b = client.post("/api/v1/tickets", json=user_b_payload)
+    assert res_b.status_code == 201
+    ticket_b = res_b.json()
+    assert ticket_b["currentStage"] == "submitted"
+    assert ticket_b["assignedCrew"] is None
+    assert ticket_b["userId"] == "USR-BETA"
+
+    # Query tickets for User A
+    user_a_tickets = client.get("/api/v1/tickets?user_id=USR-ALPHA").json()
+    assert any(t["id"] == ticket_a["id"] for t in user_a_tickets)
+    assert not any(t["id"] == ticket_b["id"] for t in user_a_tickets)
+
+    # Query tickets for User B
+    user_b_tickets = client.get("/api/v1/tickets?user_id=USR-BETA").json()
+    assert any(t["id"] == ticket_b["id"] for t in user_b_tickets)
+    assert not any(t["id"] == ticket_a["id"] for t in user_b_tickets)
+
+    # Cross-user direct access attempt should be rejected with 403 Forbidden
+    cross_access = client.get(f"/api/v1/tickets/{ticket_a['id']}?user_id=USR-BETA")
+    assert cross_access.status_code == 403
+
+
+def test_fresh_ticket_has_no_fake_officer_or_execution():
+    """Verify newly raised complaints start strictly at 'submitted' with NO assigned officer."""
+    payload = {
+        "category": "Structural Crack",
+        "title": "Bridge retaining wall fissure",
+        "location": "Siripuram Flyover Pier 3",
+        "coordinates": {"latitude": 17.7300, "longitude": 83.3200},
+        "citizenName": "Satya Real User",
+        "citizenPhone": "+91 98480 99999",
+        "userId": "USR-REAL-01",
+        "severity": "Critical",
+    }
+    res = client.post("/api/v1/tickets", json=payload)
+    assert res.status_code == 201
+    ticket = res.json()
+
+    # Must NOT have any auto-assigned officer or crew
+    assert ticket["assignedCrew"] is None
+    # Must NOT be marked as in_progress or under repair
+    assert ticket["currentStage"] == "submitted"
+
+    # Only when an official explicitly assigns an officer does it advance to 'assigned'
+    assign_res = client.post(
+        f"/api/v1/tickets/{ticket['id']}/assign-officer",
+        json={"officerId": "OFF-01", "targetSlaHours": 24},
+    )
+    assert assign_res.status_code == 200
+    assigned_ticket = assign_res.json()
+    assert assigned_ticket["currentStage"] == "assigned"
+    assert assigned_ticket["assignedCrew"]["workerName"] == "Er. K. Ramesh Naidu"
+
+
+
 

@@ -42,11 +42,19 @@ async function safeFetch<T>(endpoint: string, options?: RequestInit, fallbackDat
 
 export const JanRakshakAPI = {
   // --- Civic Tickets ---
-  async getTickets(category?: string, stage?: string, search?: string): Promise<Ticket[]> {
+  async getTickets(
+    category?: string,
+    stage?: string,
+    search?: string,
+    userId?: string,
+    citizenPhone?: string
+  ): Promise<Ticket[]> {
     const params = new URLSearchParams();
     if (category && category !== 'All') params.append('category', category);
     if (stage && stage !== 'All') params.append('stage', stage);
     if (search) params.append('search', search);
+    if (userId) params.append('user_id', userId);
+    if (citizenPhone) params.append('citizen_phone', citizenPhone);
 
     const query = params.toString() ? `?${params.toString()}` : '';
     return safeFetch<Ticket[]>(`/tickets${query}`);
@@ -108,12 +116,24 @@ export const JanRakshakAPI = {
     });
   },
 
-  async getElderProfile(): Promise<ElderProfile> {
-    return safeFetch<ElderProfile>('/sos/elder-profile');
+  async getElderProfile(userId?: string, citizenPhone?: string): Promise<ElderProfile> {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    if (citizenPhone) params.append('citizen_phone', citizenPhone);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return safeFetch<ElderProfile>(`/sos/elder-profile${query}`);
   },
 
-  async updateElderProfile(profile: ElderProfile): Promise<ElderProfile> {
-    return safeFetch<ElderProfile>('/sos/elder-profile', {
+  async updateElderProfile(
+    profile: ElderProfile,
+    userId?: string,
+    citizenPhone?: string
+  ): Promise<ElderProfile> {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    if (citizenPhone) params.append('citizen_phone', citizenPhone);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return safeFetch<ElderProfile>(`/sos/elder-profile${query}`, {
       method: 'PUT',
       body: JSON.stringify(profile),
     });
@@ -170,8 +190,12 @@ export const JanRakshakAPI = {
     return safeFetch('/sos/broadcasts', {}, []);
   },
 
-  async getActiveSOSIncidents(): Promise<any[]> {
-    return safeFetch('/sos/incidents', {}, []);
+  async getActiveSOSIncidents(userId?: string, citizenPhone?: string): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    if (citizenPhone) params.append('citizen_phone', citizenPhone);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return safeFetch(`/sos/incidents${query}`, {}, []);
   },
 
 
@@ -192,8 +216,16 @@ export const JanRakshakAPI = {
   },
 
   // --- Civilian Volunteer Corps ---
-  async getVolunteerApplications(statusFilter?: string): Promise<VolunteerApplication[]> {
-    const query = statusFilter && statusFilter !== 'All' ? `?status_filter=${statusFilter}` : '';
+  async getVolunteerApplications(
+    statusFilter?: string,
+    userId?: string,
+    phone?: string
+  ): Promise<VolunteerApplication[]> {
+    const params = new URLSearchParams();
+    if (statusFilter && statusFilter !== 'All') params.append('status_filter', statusFilter);
+    if (userId) params.append('user_id', userId);
+    if (phone) params.append('phone', phone);
+    const query = params.toString() ? `?${params.toString()}` : '';
     return safeFetch<VolunteerApplication[]>(`/volunteers/applications${query}`);
   },
 

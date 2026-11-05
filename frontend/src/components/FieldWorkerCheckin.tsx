@@ -148,7 +148,7 @@ export const FieldWorkerCheckin: React.FC<FieldWorkerCheckinProps> = ({
             <div className="text-right">
               <span className="text-xs text-slate-400 block font-mono">Assigned Crew</span>
               <span className="text-xs font-bold text-slate-800">
-                {currentTicket.assignedCrew?.workerName || 'Ramesh Naidu (Ward 14 Road Crew)'}
+                {currentTicket.assignedCrew?.workerName || 'Unassigned / Pending Officer Assignment'}
               </span>
             </div>
           </div>

@@ -41,12 +41,11 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
 }) => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [feedScope, setFeedScope] = useState<'my' | 'all'>('all');
 
+  // Strictly isolate data: only complaints filed by this specific authenticated citizen
   const myTickets = tickets.filter((t) => isUserTicketOwner(t, currentUser));
-  const baseTickets = feedScope === 'my' ? myTickets : tickets;
 
-  const filteredTickets = baseTickets.filter((t) => {
+  const filteredTickets = myTickets.filter((t) => {
     const matchesCategory =
       activeFilter === 'all' ||
       (activeFilter === 'pothole' && t.category.includes('Pothole')) ||
@@ -59,11 +58,11 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
     return matchesCategory && matchesSearch;
   });
 
-  // Calculate live civic stats
-  const totalReports = tickets.length;
-  const resolvedReports = tickets.filter((t) => t.currentStage === 'resolved').length;
-  const inProgressReports = tickets.filter((t) => t.currentStage === 'in_progress').length;
-  const mergedClusterCount = tickets.reduce((acc, t) => acc + (t.mergedCount || 1), 0);
+  // Calculate user-scoped civic stats
+  const totalReports = myTickets.length;
+  const resolvedReports = myTickets.filter((t) => t.currentStage === 'resolved').length;
+  const inProgressReports = myTickets.filter((t) => t.currentStage === 'in_progress' || t.currentStage === 'assigned').length;
+  const mergedClusterCount = myTickets.reduce((acc, t) => acc + (t.mergedCount || 1), 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-7 font-sans">
@@ -274,38 +273,18 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
         </div>
       </div>
 
-      {/* Active Public Civic Tickets Feed */}
+      {/* User-Scoped Civic Tickets Feed */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <button
-                onClick={() => setFeedScope('my')}
-                className={`px-3 py-1 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
-                  feedScope === 'my'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
+              <span className="px-3 py-1 rounded-xl text-xs font-bold font-mono bg-blue-600 text-white shadow-xs flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5" />
                 <span>My Filed Reports ({myTickets.length})</span>
-              </button>
-              <button
-                onClick={() => setFeedScope('all')}
-                className={`px-3 py-1 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
-                  feedScope === 'all'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                <Building2 className="w-3.5 h-3.5" />
-                <span>Ward 14 Feed ({tickets.length})</span>
-              </button>
+              </span>
             </div>
             <p className="text-xs text-slate-500">
-              {feedScope === 'my'
-                ? `Showing only reports filed under ${currentUser?.fullName || 'Your Account'} (${currentUser?.mobileNumber || ''})`
-                : 'Live 5-stage tracking with field-crew verification stamps'}
+              Showing only reports filed under <strong className="text-slate-700">{currentUser?.fullName || 'Your Account'}</strong> ({currentUser?.mobileNumber || ''}) with real-time 5-stage SLA tracking.
             </p>
           </div>
 
@@ -366,14 +345,14 @@ export const CitizenHomeNormal: React.FC<CitizenHomeNormalProps> = ({
               <ClipboardList className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-slate-900">
-              {feedScope === 'my' ? 'No Complaints Filed by You Yet' : 'No Matching Reports Found'}
+              {myTickets.length === 0 ? 'No Complaints Filed by You Yet' : 'No Matching Reports Found'}
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              {feedScope === 'my'
-                ? 'You have not submitted any civic complaints yet. Tap Snap & Report to log road craters or drainage issues.'
+              {myTickets.length === 0
+                ? 'You have not submitted any civic complaints yet. Tap Snap & Report to log road craters or drainage issues with GPS proof.'
                 : 'Try selecting a different category filter or clearing your search keywords.'}
             </p>
-            {feedScope === 'my' && (
+            {myTickets.length === 0 && (
               <button
                 onClick={() => onNavigate('camera_defect_capture')}
                 className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs inline-flex items-center gap-1.5 transition-all cursor-pointer"

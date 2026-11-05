@@ -449,46 +449,39 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
       setIsSubmitting(false);
       setSubmitSuccess(true);
 
-      if (isNearDuplicate) {
-        // Consolidate citizen's photo evidence into master ticket cluster
-        if (capturedPhoto && onUpdateTicketPhoto) {
-          onUpdateTicketPhoto(duplicateId, capturedPhoto, 'before');
-        }
-        onSelectTicket(duplicateId);
-        setTimeout(() => {
-          onNavigate('spatial_dedup_notice');
-        }, 800);
-      } else {
-        const severityMap: Record<UrgencyLevel, Ticket['severity']> = {
-          'Minor Slow': 'Low',
-          'Traffic Block': 'High',
-          'Accident Risk': 'Critical',
-        };
+      const severityMap: Record<UrgencyLevel, Ticket['severity']> = {
+        'Minor Slow': 'Low',
+        'Traffic Block': 'High',
+        'Accident Risk': 'Critical',
+      };
 
-        const newTicket: Ticket = {
-          id: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
-          category,
-          title: landmark ? `${category} - ${landmark}` : defectTitle,
-          location: `${selectedWardName || 'GVMC Jurisdiction'}, Visakhapatnam`,
-          coordinates: coords,
-          reportedAt: 'Just now',
-          currentStage: 'submitted',
-          citizenName: currentUser?.fullName || 'Verified Citizen',
-          citizenPhone: currentUser?.mobileNumber || '+91 98480 12345',
-          userId: currentUser?.id,
-          citizenAadhaar: currentUser?.aadhaarNumber,
-          mergedCount: 1,
-          severity: severityMap[urgency],
-          beforeImageUrl: capturedPhoto,
-        };
+      // Always create a clean, genuine ticket belonging strictly to the submitting citizen
+      // Fresh complaints start strictly at 'submitted' with NO auto-assigned crew
+      const newTicket: Ticket = {
+        id: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
+        category,
+        title: landmark ? `${category} - ${landmark}` : defectTitle,
+        location: `${selectedWardName || 'GVMC Jurisdiction'}, Visakhapatnam`,
+        coordinates: coords,
+        reportedAt: 'Just now',
+        currentStage: 'submitted',
+        citizenName: currentUser?.fullName || 'Verified Citizen',
+        citizenPhone: currentUser?.mobileNumber || '+91 98480 12345',
+        userId: currentUser?.id,
+        citizenAadhaar: currentUser?.aadhaarNumber,
+        mergedCount: isNearDuplicate ? 2 : 1,
+        severity: severityMap[urgency],
+        assignedCrew: undefined,
+        beforeImageUrl: capturedPhoto,
+        afterImageUrl: undefined,
+      };
 
-        onAddNewTicket(newTicket);
-        onSelectTicket(newTicket.id);
+      onAddNewTicket(newTicket);
+      onSelectTicket(newTicket.id);
 
-        setTimeout(() => {
-          onNavigate('public_ticket_stepper');
-        }, 800);
-      }
+      setTimeout(() => {
+        onNavigate('public_ticket_stepper');
+      }, 800);
     }, 1000);
   };
 

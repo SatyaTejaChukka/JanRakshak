@@ -4,6 +4,7 @@ API Endpoints for Civilian Volunteer Corps and NDRF Mobilization.
 
 from typing import List, Optional
 import random
+import re
 from fastapi import APIRouter, HTTPException, Query, status
 
 from backend.app.schemas.volunteers import (
@@ -21,9 +22,21 @@ router = APIRouter(prefix="/volunteers", tags=["Civilian Volunteer Corps"])
 @router.get("/applications", response_model=List[VolunteerApplicationResponse])
 async def list_volunteer_applications(
     status_filter: Optional[str] = Query(None, description="Filter by status (PENDING, APPROVED, REJECTED)"),
+    user_id: Optional[str] = Query(None, description="Filter strictly by citizen User ID"),
+    phone: Optional[str] = Query(None, description="Filter strictly by citizen Phone"),
 ):
-    """List incoming citizen volunteer applications for NDRF review."""
-    apps = db_store.volunteer_applications
+    """List citizen volunteer applications with user isolation support."""
+    apps = list(db_store.volunteer_applications)
+    if user_id:
+        apps = [a for a in apps if a.get("userId") == user_id]
+    elif phone:
+        clean_q = re.sub(r"\D", "", phone)[-10:]
+        if clean_q:
+            apps = [
+                a for a in apps
+                if re.sub(r"\D", "", a.get("phone", ""))[-10:] == clean_q
+            ]
+
     if status_filter and status_filter != "All":
         apps = [a for a in apps if a["status"] == status_filter]
     return apps
@@ -45,6 +58,7 @@ async def submit_volunteer_application(payload: VolunteerApplicationCreate):
         "equipmentAvailable": payload.equipmentAvailable,
         "availability": payload.availability,
         "bloodGroup": payload.bloodGroup,
+        "userId": payload.userId,
         "status": "PENDING",
         "appliedAt": "Just now",
         "reviewedBy": None,

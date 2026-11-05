@@ -14,17 +14,14 @@ INITIAL_TICKETS: List[Dict[str, Any]] = [
         "location": "Opposite Lawson’s Bay Colony Arch, Beach Road",
         "coordinates": {"latitude": 17.7412, "longitude": 83.3421},
         "reportedAt": "10:42 AM Today",
-        "currentStage": "in_progress",
+        "currentStage": "submitted",
         "citizenName": "Chukka Satya Teja",
         "citizenPhone": "+91 98480 12345",
+        "userId": "USR-10003",
+        "citizenAadhaar": "XXXX-XXXX-4921",
         "mergedCount": 3,
         "severity": "Critical",
-        "assignedCrew": {
-            "workerName": "Srinivas Rao (GVMC Crew 4)",
-            "unitId": "GVMC-REPAIR-CREW-04",
-            "phone": "+91 94401 23456",
-            "checkedInTime": "11:15 AM (On Site)",
-        },
+        "assignedCrew": None,
         "beforeImageUrl": None,
         "afterImageUrl": None,
     },
@@ -35,17 +32,14 @@ INITIAL_TICKETS: List[Dict[str, Any]] = [
         "location": "Siripuram Junction to AU In-Gate Feeder Road",
         "coordinates": {"latitude": 17.7291, "longitude": 83.3225},
         "reportedAt": "08:15 AM Today",
-        "currentStage": "assigned",
-        "citizenName": "K. Venkata Rao",
-        "citizenPhone": "+91 94402 33445",
+        "currentStage": "submitted",
+        "citizenName": "K. Satyanarayana",
+        "citizenPhone": "+91 98480 23145",
+        "userId": "USR-10001",
+        "citizenAadhaar": "XXXX-XXXX-1092",
         "mergedCount": 5,
         "severity": "High",
-        "assignedCrew": {
-            "workerName": "Er. V. Satyanarayana (APEPDCL Line Inspector)",
-            "unitId": "APEPDCL-ZONE2-EMERGENCY",
-            "phone": "+91 99890 22334",
-            "checkedInTime": "08:45 AM (En Route)",
-        },
+        "assignedCrew": None,
         "beforeImageUrl": None,
         "afterImageUrl": None,
     },
@@ -57,10 +51,13 @@ INITIAL_TICKETS: List[Dict[str, Any]] = [
         "coordinates": {"latitude": 17.7384, "longitude": 83.3341},
         "reportedAt": "09:05 AM Today",
         "currentStage": "submitted",
-        "citizenName": "P. Ramana",
-        "citizenPhone": "+91 98850 67890",
+        "citizenName": "L. Padmavathi",
+        "citizenPhone": "+91 91234 56789",
+        "userId": "USR-10002",
+        "citizenAadhaar": "XXXX-XXXX-5562",
         "mergedCount": 2,
         "severity": "High",
+        "assignedCrew": None,
         "beforeImageUrl": None,
         "afterImageUrl": None,
     },
@@ -364,6 +361,10 @@ class MockDBStore:
     def __init__(self):
         self.tickets = copy.deepcopy(INITIAL_TICKETS)
         self.elder_profile = copy.deepcopy(INITIAL_ELDER_PROFILE)
+        self.elder_profiles: Dict[str, Dict[str, Any]] = {
+            "USR-10001": copy.deepcopy(INITIAL_ELDER_PROFILE),
+            "9848023145": copy.deepcopy(INITIAL_ELDER_PROFILE),
+        }
         self.shelters = copy.deepcopy(INITIAL_SHELTERS)
         self.hazards = copy.deepcopy(INITIAL_HAZARDS)
         self.volunteer_applications = copy.deepcopy(INITIAL_VOLUNTEER_APPLICATIONS)

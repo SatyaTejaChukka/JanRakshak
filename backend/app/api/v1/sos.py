@@ -2,10 +2,11 @@
 API Endpoints for Emergency SOS and Vulnerable Citizen Assistance.
 """
 
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 import random
-from fastapi import APIRouter, HTTPException, status
+import re
+from fastapi import APIRouter, HTTPException, Query, status
 
 from backend.app.schemas.sos import (
     SOSTriggerRequest,
@@ -23,16 +24,38 @@ router = APIRouter(prefix="/sos", tags=["Emergency Life-Safety & SOS"])
 
 
 @router.get("/elder-profile", response_model=ElderProfileSchema)
-async def get_elder_profile():
-    """Retrieve pre-registered senior citizen vulnerability profile."""
-    return db_store.elder_profile
+async def get_elder_profile(
+    user_id: Optional[str] = Query(None, description="Citizen User ID for profile isolation"),
+    citizen_phone: Optional[str] = Query(None, description="Citizen Mobile Number"),
+):
+    """Retrieve pre-registered senior citizen vulnerability profile for the current user."""
+    user_key = user_id or (re.sub(r"\D", "", citizen_phone)[-10:] if citizen_phone else None)
+    if user_key and hasattr(db_store, "elder_profiles") and user_key in db_store.elder_profiles:
+        return db_store.elder_profiles[user_key]
+
+    # Return default base profile or personalized clean template
+    profile = dict(db_store.elder_profile)
+    if user_id:
+        profile["userId"] = user_id
+    if citizen_phone:
+        profile["citizenPhone"] = citizen_phone
+    return profile
 
 
 @router.put("/elder-profile", response_model=ElderProfileSchema)
-async def update_elder_profile(payload: ElderProfileSchema):
-    """Update vulnerability registry details and critical medical needs."""
-    db_store.elder_profile = payload.dict()
-    return db_store.elder_profile
+async def update_elder_profile(
+    payload: ElderProfileSchema,
+    user_id: Optional[str] = Query(None, description="Citizen User ID for profile isolation"),
+    citizen_phone: Optional[str] = Query(None, description="Citizen Mobile Number"),
+):
+    """Update vulnerability registry details and critical medical needs strictly for the user."""
+    profile_data = payload.dict()
+    user_key = user_id or payload.userId or (re.sub(r"\D", "", citizen_phone)[-10:] if citizen_phone else None)
+    if hasattr(db_store, "elder_profiles") and user_key:
+        db_store.elder_profiles[user_key] = profile_data
+
+    db_store.elder_profile = profile_data
+    return profile_data
 
 
 @router.post("/trigger", response_model=SOSResponse, status_code=status.HTTP_201_CREATED)
@@ -43,7 +66,13 @@ async def trigger_emergency_sos(payload: SOSTriggerRequest):
     Alerts all nearby citizens, volunteers, and the NDRF War Room.
     """
     sos_id = f"ELD-{random.randint(4100, 4999)}"
-    elder = db_store.elder_profile
+
+    # Resolve elder profile for this specific user if available
+    user_key = payload.userId or (re.sub(r"\D", "", payload.citizenPhone)[-10:] if payload.citizenPhone else None)
+    if user_key and hasattr(db_store, "elder_profiles") and user_key in db_store.elder_profiles:
+        elder = db_store.elder_profiles[user_key]
+    else:
+        elder = db_store.elder_profile
 
     # Set nearest volunteer en-route
     if db_store.active_volunteers:
@@ -52,11 +81,11 @@ async def trigger_emergency_sos(payload: SOSTriggerRequest):
         first_vol["assignedIncidentId"] = sos_id
 
     # Format real location using GPS coordinates if provided
-    loc_str = elder["address"]
+    loc_str = elder.get("address", "Coastal Ward 14, Visakhapatnam")
     if payload.coordinates:
         loc_str = f"{payload.coordinates.latitude:.5f}° N, {payload.coordinates.longitude:.5f}° E ({elder.get('address', 'Live GPS Fix')})"
 
-    # Record active SOS incident for NDRF War Room
+    # Record active SOS incident with user isolation
     now_str = datetime.now(timezone.utc).strftime("%I:%M %p Today")
     incident = {
         "id": sos_id,
@@ -68,6 +97,8 @@ async def trigger_emergency_sos(payload: SOSTriggerRequest):
         "status": "DISPATCHED",
         "timestamp": now_str,
         "coordinates": payload.coordinates.model_dump() if hasattr(payload.coordinates, "model_dump") else payload.coordinates.dict() if payload.coordinates else None,
+        "userId": payload.userId or elder.get("userId"),
+        "citizenPhone": payload.citizenPhone or elder.get("citizenPhone"),
     }
     db_store.sos_incidents.insert(0, incident)
 
@@ -100,6 +131,8 @@ async def trigger_emergency_sos(payload: SOSTriggerRequest):
         destinationShelter="Andhra University Indoor Sports Complex Hub",
         timestamp="Just now",
         coordinates=payload.coordinates,
+        userId=payload.userId,
+        citizenPhone=payload.citizenPhone,
     )
 
 
@@ -141,9 +174,22 @@ async def list_emergency_broadcasts():
 
 
 @router.get("/incidents", response_model=List[SOSIncidentSchema])
-async def list_active_sos_incidents():
-    """Retrieve all active SOS incidents for the NDRF War Room console."""
-    return [SOSIncidentSchema(**inc) for inc in db_store.sos_incidents]
+async def list_active_sos_incidents(
+    user_id: Optional[str] = Query(None, description="Filter strictly by citizen User ID"),
+    citizen_phone: Optional[str] = Query(None, description="Filter strictly by citizen Phone"),
+):
+    """Retrieve active SOS incidents with user data isolation for citizens, or all for NDRF dispatchers."""
+    incidents = list(db_store.sos_incidents)
+    if user_id:
+        incidents = [inc for inc in incidents if inc.get("userId") == user_id]
+    elif citizen_phone:
+        clean_q = re.sub(r"\D", "", citizen_phone)[-10:]
+        if clean_q:
+            incidents = [
+                inc for inc in incidents
+                if re.sub(r"\D", "", inc.get("citizenPhone", ""))[-10:] == clean_q
+            ]
+    return [SOSIncidentSchema(**inc) for inc in incidents]
 
 
 

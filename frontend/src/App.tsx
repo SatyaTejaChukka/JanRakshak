@@ -187,11 +187,15 @@ export default function App() {
   );
   const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
 
-  // Synchronize state with backend API on mount
+  // Synchronize state with backend API on mount or citizen/official role change
   useEffect(() => {
-    JanRakshakAPI.getTickets()
+    const isOfficial = currentRole === 'GVMC_ADMIN' || currentRole === 'NDRF_ADMIN';
+    const userId = isOfficial ? undefined : currentUser?.id;
+    const phone = isOfficial ? undefined : currentUser?.mobileNumber;
+
+    JanRakshakAPI.getTickets(undefined, undefined, undefined, userId, phone)
       .then((data) => {
-        if (data && data.length > 0) {
+        if (data && Array.isArray(data)) {
           const hydrated = data.map((t) => {
             try {
               const storedBefore = localStorage.getItem(`janrakshak_photo_before_${t.id}`);
@@ -228,12 +232,45 @@ export default function App() {
       })
       .catch(() => {});
 
-    JanRakshakAPI.getVolunteerApplications()
+    JanRakshakAPI.getVolunteerApplications(undefined, userId, phone)
       .then((data) => {
         if (data && data.length > 0) setVolunteerApplications(data);
       })
       .catch(() => {});
-  }, []);
+  }, [currentUser?.id, currentUser?.mobileNumber, currentRole]);
+
+  // User-scoped elder profile loading
+  useEffect(() => {
+    if (!currentUser) return;
+    const userKey = `janrakshak_elder_profile_${currentUser.id || currentUser.mobileNumber}`;
+    try {
+      const saved = localStorage.getItem(userKey);
+      if (saved) {
+        setElderProfile(JSON.parse(saved));
+        return;
+      }
+    } catch {}
+
+    JanRakshakAPI.getElderProfile(currentUser.id, currentUser.mobileNumber)
+      .then((data) => {
+        if (data) {
+          const personalized: ElderProfile = {
+            ...INITIAL_ELDER_PROFILE,
+            ...data,
+            emergencyContacts: [
+              {
+                name: `${currentUser.fullName} (Self/Local Guardian)`,
+                relation: 'Registered Citizen',
+                phone: currentUser.mobileNumber,
+              },
+              ...(data.emergencyContacts?.slice(1) || []),
+            ],
+          };
+          setElderProfile(personalized);
+        }
+      })
+      .catch(() => {});
+  }, [currentUser?.id, currentUser?.mobileNumber]);
 
   // Real-Time Emergency Broadcast Alert state across all connected citizens & users
   const [activeEmergencyBroadcast, setActiveEmergencyBroadcast] = useState<EmergencyBroadcast | null>(null);
@@ -795,12 +832,23 @@ export default function App() {
   }, [tickets, currentUser]);
 
   // If a specific ticket was chosen, display it.
-  // Otherwise default to the user's own ticket, or null if a newly registered user with 0 tickets.
-  const currentSelectedTicket = selectedTicketId
-    ? tickets.find((t) => t.id === selectedTicketId) || null
-    : userTickets.length > 0
-    ? userTickets[0]
-    : null;
+  // For citizens, strictly ensure the ticket belongs to the user.
+  // Otherwise default to the user's own ticket, or null if 0 tickets.
+  const currentSelectedTicket = useMemo(() => {
+    if (currentRole === 'CITIZEN') {
+      if (selectedTicketId) {
+        const found = userTickets.find((t) => t.id === selectedTicketId);
+        if (found) return found;
+      }
+      return userTickets.length > 0 ? userTickets[0] : null;
+    }
+    // Officials can view any municipal ticket
+    return selectedTicketId
+      ? tickets.find((t) => t.id === selectedTicketId) || null
+      : tickets.length > 0
+      ? tickets[0]
+      : null;
+  }, [currentRole, selectedTicketId, userTickets, tickets]);
 
   // Dynamic Navigation Groups based on User Role
   const getNavigationGroups = () => {
@@ -932,223 +980,227 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-      {/* Universal Top Navigation Header */}
-      <Navbar
-        currentScreen={currentScreen}
-        onNavigate={handleNavigate}
-        isDisasterMode={isDisasterMode}
-        currentRole={currentRole}
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        currentUser={currentUser}
-        officialSession={officialSession}
-        onOpenAccount={() => setIsAccountModalOpen(true)}
-        onLogout={currentRole === 'CITIZEN' ? handleCitizenLogout : handleOfficialLogout}
-        liveLocation={liveLocation}
-        gpsStatus={gpsStatus}
-        onOpenGPSModal={() => setShowGpsModal(true)}
-      />
+    <div className="h-screen max-h-screen flex flex-col overflow-hidden bg-slate-50 text-slate-900 font-sans">
+      {/* Universal Top Navigation Header (Fixed at top) */}
+      <div className="shrink-0 z-40 flex flex-col">
+        <Navbar
+          currentScreen={currentScreen}
+          onNavigate={handleNavigate}
+          isDisasterMode={isDisasterMode}
+          currentRole={currentRole}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          currentUser={currentUser}
+          officialSession={officialSession}
+          onOpenAccount={() => setIsAccountModalOpen(true)}
+          onLogout={currentRole === 'CITIZEN' ? handleCitizenLogout : handleOfficialLogout}
+          liveLocation={liveLocation}
+          gpsStatus={gpsStatus}
+          onOpenGPSModal={() => setShowGpsModal(true)}
+        />
 
-      {/* Real-Time Civil Defense Emergency Broadcast Alert Banner (Notifies all nearby citizens & users) */}
-      {activeEmergencyBroadcast && (
-        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white px-4 sm:px-6 py-3 border-b-2 border-red-400 shadow-xl glow-red animate-in slide-in-from-top duration-200">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="flex items-start sm:items-center gap-3 min-w-0">
-              <div className="p-2 bg-white/20 rounded-xl shrink-0 shadow-inner">
-                <Radio className="w-5 h-5 text-yellow-300 animate-pulse" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-mono font-black uppercase bg-white/25 px-2 py-0.5 rounded-full border border-white/30">
-                    EMERGENCY CELL BROADCAST · 4370
-                  </span>
-                  <span className="text-[11px] text-red-100 font-mono">
-                    {activeEmergencyBroadcast.timestamp}
-                  </span>
-                  <span className="text-[11px] text-red-100 font-medium hidden sm:inline">
-                    · Authorized by: <strong className="text-white">{activeEmergencyBroadcast.senderName}</strong>
-                  </span>
+        {/* Real-Time Civil Defense Emergency Broadcast Alert Banner (Notifies all nearby citizens & users) */}
+        {activeEmergencyBroadcast && (
+          <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white px-4 sm:px-6 py-3 border-b-2 border-red-400 shadow-xl glow-red animate-in slide-in-from-top duration-200">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
+                <div className="p-2 bg-white/20 rounded-xl shrink-0 shadow-inner">
+                  <Radio className="w-5 h-5 text-yellow-300 animate-pulse" />
                 </div>
-                <h3 className="text-sm sm:text-base font-black text-white mt-0.5 truncate">
-                  {activeEmergencyBroadcast.title}
-                </h3>
-                <p className="text-xs text-red-100 mt-0.5 leading-snug line-clamp-2 sm:line-clamp-none">
-                  {activeEmergencyBroadcast.message}
-                </p>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-mono font-black uppercase bg-white/25 px-2 py-0.5 rounded-full border border-white/30">
+                      EMERGENCY CELL BROADCAST · 4370
+                    </span>
+                    <span className="text-[11px] text-red-100 font-mono">
+                      {activeEmergencyBroadcast.timestamp}
+                    </span>
+                    <span className="text-[11px] text-red-100 font-medium hidden sm:inline">
+                      · Authorized by: <strong className="text-white">{activeEmergencyBroadcast.senderName}</strong>
+                    </span>
+                  </div>
+                  <h3 className="text-sm sm:text-base font-black text-white mt-0.5 truncate">
+                    {activeEmergencyBroadcast.title}
+                  </h3>
+                  <p className="text-xs text-red-100 mt-0.5 leading-snug line-clamp-2 sm:line-clamp-none">
+                    {activeEmergencyBroadcast.message}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2 self-end md:self-center shrink-0">
-              <button
-                onClick={() => {
-                  handleNavigate('hazard_navigation_map');
-                  setActiveEmergencyBroadcast(null);
-                }}
-                className="px-3.5 py-1.5 bg-white text-red-700 font-bold text-xs rounded-xl shadow-xs transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5"
-              >
-                <Compass className="w-3.5 h-3.5 text-red-600" />
-                <span>Evacuation Route</span>
-              </button>
-              <button
-                onClick={() => setActiveEmergencyBroadcast(null)}
-                className="px-3 py-1.5 bg-red-900/60 hover:bg-red-900 text-white font-semibold text-xs rounded-xl border border-red-400/50 cursor-pointer"
-              >
-                Acknowledge
-              </button>
+              <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                <button
+                  onClick={() => {
+                    handleNavigate('hazard_navigation_map');
+                    setActiveEmergencyBroadcast(null);
+                  }}
+                  className="px-3.5 py-1.5 bg-white text-red-700 font-bold text-xs rounded-xl shadow-xs transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Compass className="w-3.5 h-3.5 text-red-600" />
+                  <span>Evacuation Route</span>
+                </button>
+                <button
+                  onClick={() => setActiveEmergencyBroadcast(null)}
+                  className="px-3 py-1.5 bg-red-900/60 hover:bg-red-900 text-white font-semibold text-xs rounded-xl border border-red-400/50 cursor-pointer"
+                >
+                  Acknowledge
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-
-      {/* Real-Time Operational Telemetry Strip */}
-      <div
-        className={`px-4 sm:px-6 py-2 border-b text-xs flex flex-wrap items-center justify-between gap-3 transition-colors shadow-2xs font-mono ${
-          isDisasterMode
-            ? 'bg-red-950/95 text-red-100 border-red-800/80 backdrop-blur-md'
-            : currentRole === 'GVMC_ADMIN'
-            ? 'bg-slate-950 text-blue-100 border-slate-800 backdrop-blur-md'
-            : currentRole === 'NDRF_ADMIN'
-            ? 'bg-slate-950 text-amber-200 border-slate-800 backdrop-blur-md'
-            : 'bg-slate-900/95 text-slate-200 border-slate-800 backdrop-blur-md'
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 font-bold font-mono uppercase tracking-wider">
-            <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span>
-              {currentRole === 'GVMC_ADMIN'
-                ? 'GVMC WORKS SYSTEM:'
-                : currentRole === 'NDRF_ADMIN'
-                ? 'NDRF 10TH BATTALION COMMAND:'
-                : 'OPERATIONAL STATUS:'}
-            </span>
-          </span>
-          <span className="font-medium">
-            {currentRole === 'GVMC_ADMIN'
-              ? 'Zone 2 Works Dept · 42 Open Civic Defects · 94.2% On-Time SLA · PostGIS Deduplication Active'
+        {/* Real-Time Operational Telemetry Strip */}
+        <div
+          className={`px-4 sm:px-6 py-2 border-b text-xs flex flex-wrap items-center justify-between gap-3 transition-colors shadow-2xs font-mono ${
+            isDisasterMode
+              ? 'bg-red-950/95 text-red-100 border-red-800/80 backdrop-blur-md'
+              : currentRole === 'GVMC_ADMIN'
+              ? 'bg-slate-950 text-blue-100 border-slate-800 backdrop-blur-md'
               : currentRole === 'NDRF_ADMIN'
-              ? 'Tactical War Room · Motorized Boats Deployed · Coastal Sweeps in Progress · 4 Responders Dispatched'
-              : isDisasterMode
-              ? 'IMD Cyclone Red Alert · 18 Coastal Shelters Active · Citizen Mobilization Online'
-              : 'GVMC Ward 14 · Visakhapatnam Smart City Operations Center'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-4 text-[11px] font-mono">
-          {/* Continuous Live GPS Fix Telemetry Badge */}
-          <button
-            type="button"
-            onClick={() => setShowGpsModal(true)}
-            className="flex items-center gap-1.5 bg-black/40 hover:bg-black/60 px-2.5 py-0.5 rounded border border-white/20 cursor-pointer transition-colors"
-            title="Click to view Live GPS diagnostics"
-          >
-            {liveLocation ? (
-              <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                <span>GPS: {liveLocation.latitude.toFixed(4)}°N, {liveLocation.longitude.toFixed(4)}°E (±{Math.round(liveLocation.accuracy)}m)</span>
+              ? 'bg-slate-950 text-amber-200 border-slate-800 backdrop-blur-md'
+              : 'bg-slate-900/95 text-slate-200 border-slate-800 backdrop-blur-md'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 font-bold font-mono uppercase tracking-wider">
+              <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span>
+                {currentRole === 'GVMC_ADMIN'
+                  ? 'GVMC WORKS SYSTEM:'
+                  : currentRole === 'NDRF_ADMIN'
+                  ? 'NDRF 10TH BATTALION COMMAND:'
+                  : 'OPERATIONAL STATUS:'}
               </span>
+            </span>
+            <span className="font-medium">
+              {currentRole === 'GVMC_ADMIN'
+                ? 'Zone 2 Works Dept · 42 Open Civic Defects · 94.2% On-Time SLA · PostGIS Deduplication Active'
+                : currentRole === 'NDRF_ADMIN'
+                ? 'Tactical War Room · Motorized Boats Deployed · Coastal Sweeps in Progress · 4 Responders Dispatched'
+                : isDisasterMode
+                ? 'IMD Cyclone Red Alert · 18 Coastal Shelters Active · Citizen Mobilization Online'
+                : 'GVMC Ward 14 · Visakhapatnam Smart City Operations Center'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4 text-[11px] font-mono">
+            {/* Continuous Live GPS Fix Telemetry Badge */}
+            <button
+              type="button"
+              onClick={() => setShowGpsModal(true)}
+              className="flex items-center gap-1.5 bg-black/40 hover:bg-black/60 px-2.5 py-0.5 rounded border border-white/20 cursor-pointer transition-colors"
+              title="Click to view Live GPS diagnostics"
+            >
+              {liveLocation ? (
+                <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span>GPS: {liveLocation.latitude.toFixed(4)}°N, {liveLocation.longitude.toFixed(4)}°E (±{Math.round(liveLocation.accuracy)}m)</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-amber-300 font-bold animate-pulse">
+                  <LocateFixed className="w-3 h-3 text-amber-400" />
+                  <span>GPS: ACQUIRING FIX...</span>
+                </span>
+              )}
+            </button>
+
+            {isDisasterMode ? (
+              <>
+                <span className="flex items-center gap-1">
+                  <Wind className="w-3.5 h-3.5 text-yellow-300" /> 124 km/h Gusts
+                </span>
+                <span className="flex items-center gap-1">
+                  <Waves className="w-3.5 h-3.5 text-cyan-300" /> +3.8m Surge
+                </span>
+              </>
             ) : (
-              <span className="flex items-center gap-1 text-amber-300 font-bold animate-pulse">
-                <LocateFixed className="w-3 h-3 text-amber-400" />
-                <span>GPS: ACQUIRING FIX...</span>
-              </span>
+              <span className="text-slate-400">PostGIS ST_DWithin(50m) Active</span>
             )}
-          </button>
-
-          {isDisasterMode ? (
-            <>
-              <span className="flex items-center gap-1">
-                <Wind className="w-3.5 h-3.5 text-yellow-300" /> 124 km/h Gusts
-              </span>
-              <span className="flex items-center gap-1">
-                <Waves className="w-3.5 h-3.5 text-cyan-300" /> +3.8m Surge
-              </span>
-            </>
-          ) : (
-            <span className="text-slate-400">PostGIS ST_DWithin(50m) Active</span>
-          )}
-          <span className="bg-white/10 px-2 py-0.5 rounded font-bold">
-            {currentRole === 'CITIZEN'
-              ? 'AADHAAR VERIFIED CITIZEN'
-              : `OFFICIAL CLEARANCE: ${officialSession?.id || currentRole}`}
-          </span>
+            <span className="bg-white/10 px-2 py-0.5 rounded font-bold">
+              {currentRole === 'CITIZEN'
+                ? 'AADHAAR VERIFIED CITIZEN'
+                : `OFFICIAL CLEARANCE: ${officialSession?.id || currentRole}`}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Main Container: Collapsible Desktop Sidebar + Content Canvas */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Desktop Collapsible Left Sidebar */}
+      <div className="flex-1 flex overflow-hidden min-h-0 relative">
+        {/* Desktop Collapsible Left Sidebar (Pinned on left, never scrolls with application content) */}
         <aside
-          className={`hidden lg:flex flex-col bg-white border-r border-slate-200 transition-all duration-200 shrink-0 select-none ${
+          className={`hidden lg:flex flex-col bg-white border-r border-slate-200 transition-all duration-200 shrink-0 select-none h-full min-h-0 ${
             isSidebarOpen ? 'w-64' : 'w-0 overflow-hidden border-r-0'
           }`}
           aria-label="Desktop application navigation"
         >
           {/* Active Citizen Identity / Official Terminal Card in Sidebar */}
-          {currentRole === 'CITIZEN' ? (
-            <div className="p-3.5 m-3 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
-                  <User className="w-4 h-4" />
-                </div>
-                <div className="leading-tight min-w-0">
-                  <div className="text-xs font-bold text-slate-900 truncate">
-                    {currentUser?.fullName || 'Verified Citizen'}
+          <div className="shrink-0">
+            {currentRole === 'CITIZEN' ? (
+              <div className="p-3.5 m-3 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                    <User className="w-4 h-4" />
                   </div>
-                  <div className="text-[10px] text-emerald-700 font-mono font-medium flex items-center gap-1 mt-0.5">
-                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                    <span>Aadhaar Verified</span>
+                  <div className="leading-tight min-w-0">
+                    <div className="text-xs font-bold text-slate-900 truncate">
+                      {currentUser?.fullName || 'Verified Citizen'}
+                    </div>
+                    <div className="text-[10px] text-emerald-700 font-mono font-medium flex items-center gap-1 mt-0.5">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                      <span>Aadhaar Verified</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={handleCitizenLogout}
-                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-colors cursor-pointer shrink-0 border border-transparent hover:border-slate-200"
-                title="Sign Out of Citizen Portal"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : (
-            <div className="p-3.5 m-3 rounded-xl bg-slate-900 border border-slate-800 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                    currentRole === 'GVMC_ADMIN' ? 'bg-blue-600 text-white' : 'bg-amber-600 text-white'
-                  }`}
+                <button
+                  type="button"
+                  onClick={handleCitizenLogout}
+                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-colors cursor-pointer shrink-0 border border-transparent hover:border-slate-200"
+                  title="Sign Out of Citizen Portal"
                 >
-                  {currentRole === 'GVMC_ADMIN' ? (
-                    <Building2 className="w-4 h-4" />
-                  ) : (
-                    <ShieldAlert className="w-4 h-4" />
-                  )}
-                </div>
-                <div className="leading-tight min-w-0">
-                  <div className="text-xs font-bold text-white truncate">
-                    {officialSession?.name || (currentRole === 'GVMC_ADMIN' ? 'GVMC Works Admin' : 'NDRF Officer')}
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono truncate">
-                    {officialSession?.designation || 'Official Terminal'}
-                  </div>
-                </div>
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
               </div>
+            ) : (
+              <div className="p-3.5 m-3 rounded-xl bg-slate-900 border border-slate-800 text-white flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                      currentRole === 'GVMC_ADMIN' ? 'bg-blue-600 text-white' : 'bg-amber-600 text-white'
+                    }`}
+                  >
+                    {currentRole === 'GVMC_ADMIN' ? (
+                      <Building2 className="w-4 h-4" />
+                    ) : (
+                      <ShieldAlert className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div className="leading-tight min-w-0">
+                    <div className="text-xs font-bold text-white truncate">
+                      {officialSession?.name || (currentRole === 'GVMC_ADMIN' ? 'GVMC Works Admin' : 'NDRF Officer')}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono truncate">
+                      {officialSession?.designation || 'Official Terminal'}
+                    </div>
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                onClick={handleOfficialLogout}
-                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer shrink-0"
-                title="Exit Official Terminal"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
+                <button
+                  type="button"
+                  onClick={handleOfficialLogout}
+                  className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer shrink-0"
+                  title="Exit Official Terminal"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
 
-          <div className="p-4 flex-1 overflow-y-auto space-y-6">
+          {/* Navigation Items (Scrolls independently if needed on short viewports) */}
+          <div className="p-4 flex-1 overflow-y-auto min-h-0 space-y-6">
             {navigationGroups.map((group) => (
               <div key={group.title} className="space-y-1">
                 <div className="text-[10px] font-bold font-mono text-slate-400 tracking-wider px-2.5 mb-1.5 uppercase">
@@ -1198,14 +1250,14 @@ export default function App() {
           </div>
 
           {/* Sidebar Footer Info */}
-          <div className="p-3 border-t border-slate-100 bg-slate-50 text-[11px] text-slate-500">
+          <div className="shrink-0 p-3 border-t border-slate-100 bg-slate-50 text-[11px] text-slate-500">
             <div className="font-semibold text-slate-700">JanRakshak Web Console</div>
             <div className="text-[10px] text-slate-400 font-mono">v1.0.0 · Visakhapatnam GVMC & NDRF</div>
           </div>
         </aside>
 
-        {/* Screen Router Viewport */}
-        <main className="flex-1 overflow-y-auto pb-24 lg:pb-12">
+        {/* Screen Router Viewport (Scrolls independently!) */}
+        <main className="flex-1 overflow-y-auto min-h-0 pb-24 lg:pb-12">
           {/* Floating GovTech Toast Alerts Container */}
           {toasts.length > 0 && (
             <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
