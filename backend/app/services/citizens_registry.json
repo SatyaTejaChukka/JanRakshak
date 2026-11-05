@@ -1,0 +1,30 @@
+{
+  "9848023145": {
+    "id": "USR-10001",
+    "fullName": "K. Satyanarayana",
+    "mobileNumber": "+91 98480 23145",
+    "aadhaarNumber": "XXXX-XXXX-1092",
+    "ward": "Ward 14 (Madhurawada & Coastal Belt)",
+    "isVerified": true,
+    "registeredAt": "Pre-verified Citizen"
+  },
+  "9123456789": {
+    "id": "USR-10002",
+    "fullName": "L. Padmavathi",
+    "mobileNumber": "+91 91234 56789",
+    "aadhaarNumber": "XXXX-XXXX-5562",
+    "ward": "Ward 10 (MVP Colony & Sector 4)",
+    "isVerified": true,
+    "registeredAt": "Pre-verified Citizen"
+  },
+  "9848012345": {
+    "id": "USR-10003",
+    "fullName": "Chukka Satya Teja",
+    "mobileNumber": "+91 98480 12345",
+    "aadhaarNumber": "XXXX-XXXX-4921",
+    "ward": "Ward 14 (Madhurawada & Coastal Belt)",
+    "isVerified": true,
+    "registeredAt": "Pre-verified Citizen"
+  }
+}
+
