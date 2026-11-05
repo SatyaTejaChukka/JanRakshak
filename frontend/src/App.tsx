@@ -1075,9 +1075,15 @@ export default function App() {
         onSaveUser={(user) => {
           try {
             localStorage.setItem('janrakshak_citizen_user', JSON.stringify(user));
+            const clean = user.mobileNumber.replace(/\D/g, '').slice(-10);
+            const raw = localStorage.getItem('janrakshak_citizen_registry');
+            const registry = raw ? JSON.parse(raw) : {};
+            registry[clean] = user;
+            localStorage.setItem('janrakshak_citizen_registry', JSON.stringify(registry));
           } catch {}
           setCurrentUser(user);
           setIsAccountModalOpen(false);
+          showToast('success', 'Profile Updated', `Account details for ${user.fullName} have been saved.`);
         }}
         onLogout={handleCitizenLogout}
       />

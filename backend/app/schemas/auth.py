@@ -8,8 +8,8 @@ from pydantic import BaseModel, Field
 
 
 class AadhaarOtpRequest(BaseModel):
-    aadhaar_number: str = Field(..., description="12-digit Aadhaar number with or without spaces")
     mobile_number: str = Field(..., description="10-digit Indian mobile number")
+    aadhaar_number: Optional[str] = Field(None, description="12-digit Aadhaar number with or without spaces")
     full_name: Optional[str] = Field(None, description="Legal full name of the citizen")
     ward: Optional[str] = Field(None, description="Residing municipal ward")
     consent: bool = Field(True, description="Statutory citizen consent checkbox")

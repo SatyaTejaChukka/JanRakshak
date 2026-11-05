@@ -195,10 +195,11 @@ export const JanRakshakAPI = {
 
   // --- Aadhaar OTP Authentication (Hackathon UIDAI Simulation Gateway) ---
   async generateAadhaarOtp(payload: {
-    aadhaar_number: string;
     mobile_number: string;
+    aadhaar_number?: string;
     full_name?: string;
     ward?: string;
+    consent?: boolean;
   }): Promise<{
     client_id: string;
     otp_sent: boolean;
@@ -210,6 +211,13 @@ export const JanRakshakAPI = {
   }> {
     const fallbackOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const fallbackClientId = `AADH-LOCAL-${Date.now().toString().slice(-6)}`;
+    const cleanMobile = (payload.mobile_number || '').replace(/\D/g, '').slice(-10);
+    const cleanAadhaar = (payload.aadhaar_number || '').replace(/\D/g, '');
+    const maskedAadhaar =
+      cleanAadhaar.length >= 4
+        ? `XXXX-XXXX-${cleanAadhaar.slice(-4)}`
+        : `XXXX-XXXX-${cleanMobile.slice(-4)}`;
+
     return safeFetch(
       '/auth/aadhaar/generate-otp',
       {
@@ -220,12 +228,25 @@ export const JanRakshakAPI = {
         client_id: fallbackClientId,
         otp_sent: true,
         valid_seconds: 600,
-        masked_mobile: `+91 XXXXX ${payload.mobile_number.slice(-4)}`,
-        masked_aadhaar: `XXXX-XXXX-${payload.aadhaar_number.replace(/\D/g, '').slice(-4)}`,
-        simulated_sms: `[UIDAI] Your Aadhaar e-KYC OTP for JanRakshak registration is ${fallbackOtp}. Valid for 10 minutes. Do not share.`,
+        masked_mobile: `+91 XXXXX ${cleanMobile.slice(-4)}`,
+        masked_aadhaar: maskedAadhaar,
+        simulated_sms: `[UIDAI] Your Aadhaar e-KYC OTP for ${
+          payload.full_name || 'JanRakshak'
+        } is ${fallbackOtp}. Valid for 10 minutes. Do not share.`,
         debug_otp: fallbackOtp,
       }
     );
+  },
+
+  async lookupCitizen(mobileNumber: string): Promise<{
+    registered: boolean;
+    citizen: any;
+  }> {
+    const cleanMobile = (mobileNumber || '').replace(/\D/g, '').slice(-10);
+    return safeFetch(`/auth/aadhaar/lookup/${cleanMobile}`, {}, {
+      registered: false,
+      citizen: null,
+    });
   },
 
   async verifyAadhaarOtp(payload: {
@@ -240,6 +261,7 @@ export const JanRakshakAPI = {
     citizen: any;
     message: string;
   }> {
+    const cleanMobile = (payload.mobile_number || '').replace(/\D/g, '').slice(-10);
     return safeFetch(
       '/auth/aadhaar/verify-otp',
       {
@@ -251,9 +273,10 @@ export const JanRakshakAPI = {
         token: `session_fallback_${Date.now()}`,
         citizen: {
           id: `USR-${Math.floor(10000 + Math.random() * 90000)}`,
-          fullName: payload.full_name || 'K. Satyanarayana',
-          mobileNumber: `+91 ${payload.mobile_number || '9848012345'}`,
-          aadhaarNumber: 'XXXX-XXXX-1092',
+          fullName:
+            payload.full_name || (cleanMobile ? `Citizen (+91 ${cleanMobile})` : 'Verified Citizen'),
+          mobileNumber: `+91 ${cleanMobile || '9848012345'}`,
+          aadhaarNumber: `XXXX-XXXX-${cleanMobile ? cleanMobile.slice(-4) : '1092'}`,
           ward: payload.ward || 'Ward 14 (Madhurawada & Coastal Belt)',
           isVerified: true,
           registeredAt: 'Just Now',

@@ -24,6 +24,61 @@ interface CitizenAuthDashboardProps {
   onOpenOfficialPortal: () => void;
 }
 
+// Default Seed Registry for Known Citizens in Visakhapatnam GVMC
+const DEFAULT_CITIZENS_REGISTRY: Record<string, UserProfile> = {
+  '9848023145': {
+    id: 'USR-10001',
+    fullName: 'K. Satyanarayana',
+    mobileNumber: '+91 98480 23145',
+    aadhaarNumber: 'XXXX-XXXX-1092',
+    ward: 'Ward 14 (Madhurawada & Coastal Belt)',
+    isVerified: true,
+    registeredAt: 'Pre-verified Citizen',
+  },
+  '9123456789': {
+    id: 'USR-10002',
+    fullName: 'L. Padmavathi',
+    mobileNumber: '+91 91234 56789',
+    aadhaarNumber: 'XXXX-XXXX-5562',
+    ward: 'Ward 10 (MVP Colony & Sector 4)',
+    isVerified: true,
+    registeredAt: 'Pre-verified Citizen',
+  },
+  '9848012345': {
+    id: 'USR-10003',
+    fullName: 'Chukka Satya Teja',
+    mobileNumber: '+91 98480 12345',
+    aadhaarNumber: 'XXXX-XXXX-4921',
+    ward: 'Ward 14 (Madhurawada & Coastal Belt)',
+    isVerified: true,
+    registeredAt: 'Pre-verified Citizen',
+  },
+};
+
+// Retrieve persistent citizen registry from localStorage
+export const getCitizenRegistry = (): Record<string, UserProfile> => {
+  try {
+    const raw = localStorage.getItem('janrakshak_citizen_registry');
+    if (!raw) {
+      localStorage.setItem('janrakshak_citizen_registry', JSON.stringify(DEFAULT_CITIZENS_REGISTRY));
+      return { ...DEFAULT_CITIZENS_REGISTRY };
+    }
+    return { ...DEFAULT_CITIZENS_REGISTRY, ...JSON.parse(raw) };
+  } catch {
+    return { ...DEFAULT_CITIZENS_REGISTRY };
+  }
+};
+
+// Save newly registered citizen or update existing profile
+export const saveCitizenToRegistry = (mobile: string, profile: UserProfile) => {
+  try {
+    const clean = mobile.replace(/\D/g, '').slice(-10);
+    const registry = getCitizenRegistry();
+    registry[clean] = profile;
+    localStorage.setItem('janrakshak_citizen_registry', JSON.stringify(registry));
+  } catch {}
+};
+
 export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
   onCitizenLogin,
   onOpenOfficialPortal,
@@ -36,6 +91,9 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
   const [mobileNumber, setMobileNumber] = useState('');
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [ward, setWard] = useState('Ward 14 (Madhurawada & Coastal Belt)');
+
+  // Recognized Citizen on typing mobile number
+  const [recognizedCitizen, setRecognizedCitizen] = useState<UserProfile | null>(null);
 
   // OTP Verification State
   const [isOtpStep, setIsOtpStep] = useState(false);
@@ -58,6 +116,21 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
     return () => clearInterval(interval);
   }, [isOtpStep, resendTimer]);
 
+  // Mode Switcher handler
+  const handleSwitchMode = (mode: 'LOGIN' | 'REGISTER') => {
+    setAuthMode(mode);
+    setErrorMessage('');
+    setIsOtpStep(false);
+    setEnteredOtp('');
+    setIncomingSmsToast(null);
+
+    const clean = mobileNumber.replace(/\D/g, '').slice(-10);
+    if (clean.length === 10) {
+      const reg = getCitizenRegistry();
+      setRecognizedCitizen(reg[clean] || null);
+    }
+  };
+
   // Format Aadhaar with 4-digit spacing (XXXX XXXX XXXX)
   const handleAadhaarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 12);
@@ -65,10 +138,28 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
     setAadhaarNumber(formatted);
   };
 
-  // Format Mobile Number (10 digits)
+  // Format Mobile Number (10 digits) & dynamically detect registered citizen
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 10);
     setMobileNumber(raw);
+
+    if (raw.length === 10) {
+      const registry = getCitizenRegistry();
+      if (registry[raw]) {
+        setRecognizedCitizen(registry[raw]);
+      } else {
+        setRecognizedCitizen(null);
+        // Optional: query backend for registration status
+        JanRakshakAPI.lookupCitizen(raw).then((res) => {
+          if (res?.registered && res.citizen) {
+            setRecognizedCitizen(res.citizen);
+            saveCitizenToRegistry(raw, res.citizen);
+          }
+        }).catch(() => {});
+      }
+    } else {
+      setRecognizedCitizen(null);
+    }
   };
 
   // Trigger Send Aadhaar / Mobile OTP
@@ -76,7 +167,9 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
     e.preventDefault();
     setErrorMessage('');
 
-    if (mobileNumber.length !== 10) {
+    const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
+
+    if (cleanMobile.length !== 10) {
       setErrorMessage('Please enter a valid 10-digit Indian mobile number.');
       return;
     }
@@ -96,11 +189,26 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
     setIsSubmitting(true);
 
     try {
+      const registry = getCitizenRegistry();
+      const existing = recognizedCitizen || registry[cleanMobile];
+
+      const nameToSend = authMode === 'REGISTER'
+        ? fullName.trim()
+        : (existing ? existing.fullName : '');
+
+      const aadhaarToSend = authMode === 'REGISTER'
+        ? aadhaarNumber
+        : (existing ? existing.aadhaarNumber : undefined);
+
+      const wardToSend = authMode === 'REGISTER'
+        ? ward
+        : (existing ? existing.ward : undefined);
+
       const res = await JanRakshakAPI.generateAadhaarOtp({
-        aadhaar_number: aadhaarNumber || '4921 8842 1092',
-        mobile_number: mobileNumber,
-        full_name: fullName,
-        ward,
+        aadhaar_number: aadhaarToSend,
+        mobile_number: cleanMobile,
+        full_name: nameToSend,
+        ward: wardToSend,
       });
 
       const code = res.debug_otp;
@@ -109,21 +217,23 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
       setIsOtpStep(true);
       setResendTimer(30);
 
+      const recipientName = nameToSend || (existing ? existing.fullName : `Citizen (+91 ${cleanMobile})`);
+
       // Console inspection for developers/evaluators
       console.log(
-        `%c[JanRakshak UIDAI Simulation] Generated OTP: ${code}`,
+        `%c[JanRakshak UIDAI Simulation] Generated OTP: ${code} for ${recipientName}`,
         'color: #10b981; font-weight: bold; font-size: 13px; background: #064e3b; padding: 4px 8px; border-radius: 4px;'
       );
 
       // Simulated UIDAI / Govt SMS broadcast
-      const message = `[UIDAI] Your Aadhaar e-KYC OTP for JanRakshak registration is ${code}. Valid for 10 minutes. Do not share.`;
+      const message = `[UIDAI] Your Aadhaar e-KYC OTP for ${recipientName} is ${code}. Valid for 10 minutes. Do not share.`;
       setIncomingSmsToast(message);
     } catch (err: any) {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedOtp(code);
       setIsOtpStep(true);
       setResendTimer(30);
-      setIncomingSmsToast(`[UIDAI] Your Aadhaar e-KYC OTP for JanRakshak registration is ${code}. Valid for 10 minutes. Do not share.`);
+      setIncomingSmsToast(`[UIDAI] Your Aadhaar e-KYC OTP is ${code}. Valid for 10 minutes. Do not share.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -142,12 +252,24 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
     setIsSubmitting(true);
 
     try {
+      const cleanMobile = mobileNumber.replace(/\D/g, '').slice(-10);
+      const registry = getCitizenRegistry();
+      const existing = recognizedCitizen || registry[cleanMobile];
+
+      const nameToSend = authMode === 'REGISTER'
+        ? fullName.trim()
+        : (existing ? existing.fullName : '');
+
+      const wardToSend = authMode === 'REGISTER'
+        ? ward
+        : (existing ? existing.ward : ward);
+
       const res = await JanRakshakAPI.verifyAadhaarOtp({
         client_id: clientId,
         otp: enteredOtp,
-        full_name: authMode === 'REGISTER' ? fullName : 'K. Satyanarayana',
-        mobile_number: mobileNumber,
-        ward,
+        full_name: nameToSend,
+        mobile_number: cleanMobile,
+        ward: wardToSend,
       });
 
       console.log(
@@ -155,21 +277,43 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
         'color: #38bdf8; font-weight: bold; font-size: 12px; background: #082f49; padding: 3px 6px; border-radius: 4px;'
       );
 
+      // Resolve Citizen Identity strictly to THIS mobile user
+      const resolvedName =
+        (res?.citizen?.fullName && res.citizen.fullName !== 'Citizen Applicant')
+          ? res.citizen.fullName
+          : (nameToSend || (existing ? existing.fullName : `Citizen (+91 ${cleanMobile})`));
+
+      const rawAadhaarInput = aadhaarNumber.replace(/\s/g, '');
+      const maskedFromInput = rawAadhaarInput.length === 12
+        ? `XXXX-XXXX-${rawAadhaarInput.slice(-4)}`
+        : null;
+
+      const resolvedAadhaar =
+        res?.citizen?.aadhaarNumber ||
+        (authMode === 'REGISTER' && maskedFromInput ? maskedFromInput : null) ||
+        (existing ? existing.aadhaarNumber : `XXXX-XXXX-${cleanMobile.slice(-4)}`);
+
+      const resolvedWard =
+        res?.citizen?.ward ||
+        (existing ? existing.ward : ward) ||
+        'Ward 14 (Madhurawada & Coastal Belt)';
+
+      const resolvedId =
+        res?.citizen?.id ||
+        (existing ? existing.id : `USR-${Math.floor(10000 + Math.random() * 90000)}`);
+
       const citizenUser: UserProfile = {
-        id: res?.citizen?.id || `USR-${Math.floor(10000 + Math.random() * 90000)}`,
-        fullName:
-          res?.citizen?.fullName ||
-          (authMode === 'REGISTER' && fullName.trim() ? fullName.trim() : 'K. Satyanarayana'),
-        mobileNumber:
-          res?.citizen?.mobileNumber || (mobileNumber ? `+91 ${mobileNumber}` : '+91 98480 12345'),
-        aadhaarNumber:
-          res?.citizen?.aadhaarNumber ||
-          (authMode === 'REGISTER' && aadhaarNumber ? aadhaarNumber : '4921 8842 1092'),
-        ward: res?.citizen?.ward || ward || 'Ward 14 (Madhurawada & Coastal Belt)',
+        id: resolvedId,
+        fullName: resolvedName,
+        mobileNumber: `+91 ${cleanMobile}`,
+        aadhaarNumber: resolvedAadhaar,
+        ward: resolvedWard,
         isVerified: true,
-        registeredAt: 'Just Now',
+        registeredAt: existing ? existing.registeredAt : 'Verified Citizen',
       };
 
+      // Persist in local registry and active session
+      saveCitizenToRegistry(cleanMobile, citizenUser);
       try {
         localStorage.setItem('janrakshak_citizen_user', JSON.stringify(citizenUser));
       } catch (err) {}
@@ -184,15 +328,17 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
 
   // Quick Demo Login Helper for Evaluators
   const handleQuickDemoCitizen = (name: string, phone: string, aadhaar: string, demoWard: string) => {
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
     const demoUser: UserProfile = {
       id: `USR-${Math.floor(10000 + Math.random() * 90000)}`,
       fullName: name,
-      mobileNumber: `+91 ${phone}`,
-      aadhaarNumber: aadhaar,
+      mobileNumber: `+91 ${cleanPhone}`,
+      aadhaarNumber: aadhaar.startsWith('XXXX') ? aadhaar : `XXXX-XXXX-${aadhaar.replace(/\D/g, '').slice(-4)}`,
       ward: demoWard,
       isVerified: true,
-      registeredAt: 'Active Citizen',
+      registeredAt: 'Pre-verified Citizen',
     };
+    saveCitizenToRegistry(cleanPhone, demoUser);
     try {
       localStorage.setItem('janrakshak_citizen_user', JSON.stringify(demoUser));
     } catch (err) {}
@@ -286,7 +432,7 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
             <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
               {authMode === 'REGISTER'
                 ? 'Register your profile using your Mobile & 12-digit Aadhaar for authenticated civic reporting and cyclone disaster assistance.'
-                : 'Sign in to file municipal defects, track real-time SLA resolutions, or access emergency flood & cyclone relief.'}
+                : 'Sign in with your registered mobile number and secure Aadhaar e-KYC OTP verification.'}
             </p>
           </div>
 
@@ -295,10 +441,7 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
             <div className="grid grid-cols-2 p-1 bg-slate-950/80 rounded-2xl border border-slate-800 text-xs font-bold">
               <button
                 type="button"
-                onClick={() => {
-                  setAuthMode('LOGIN');
-                  setErrorMessage('');
-                }}
+                onClick={() => handleSwitchMode('LOGIN')}
                 className={`py-2.5 rounded-xl transition-all cursor-pointer ${
                   authMode === 'LOGIN'
                     ? 'bg-blue-600 text-white shadow-md'
@@ -309,10 +452,7 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setAuthMode('REGISTER');
-                  setErrorMessage('');
-                }}
+                onClick={() => handleSwitchMode('REGISTER')}
                 className={`py-2.5 rounded-xl transition-all cursor-pointer ${
                   authMode === 'REGISTER'
                     ? 'bg-blue-600 text-white shadow-md'
@@ -380,6 +520,47 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
                 </p>
               </div>
 
+              {/* Recognized Citizen Profile Indicator (LOGIN Mode) */}
+              {authMode === 'LOGIN' && recognizedCitizen && (
+                <div className="p-3 bg-blue-950/80 border border-blue-500/40 rounded-xl flex items-center justify-between text-xs animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-blue-600/30 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold shrink-0">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white truncate">{recognizedCitizen.fullName}</span>
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded font-mono font-bold shrink-0">
+                          Verified
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-400 font-mono block truncate">
+                        Aadhaar: {recognizedCitizen.aadhaarNumber} · {recognizedCitizen.ward.split('(')[0]}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* New Citizen Hint (LOGIN Mode when phone is 10 digits and not recognized) */}
+              {authMode === 'LOGIN' && mobileNumber.length === 10 && !recognizedCitizen && (
+                <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between gap-2 text-xs">
+                  <div className="min-w-0">
+                    <span className="text-slate-300 font-semibold block">New Citizen Mobile</span>
+                    <span className="text-[10px] text-slate-400 block truncate">
+                      Not registered in local records yet.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchMode('REGISTER')}
+                    className="px-2.5 py-1 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0"
+                  >
+                    Register Now &rarr;
+                  </button>
+                </div>
+              )}
+
               {/* Aadhaar Number (Strictly for Registration) */}
               {authMode === 'REGISTER' && (
                 <div>
@@ -435,7 +616,15 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
                 disabled={isSubmitting}
                 className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 active:scale-98 text-white rounded-2xl text-xs font-extrabold uppercase tracking-wider shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
-                <span>{isSubmitting ? 'Requesting OTP...' : authMode === 'REGISTER' ? 'Send Aadhaar Verification OTP' : 'Send Login OTP'}</span>
+                <span>
+                  {isSubmitting
+                    ? 'Requesting OTP...'
+                    : authMode === 'REGISTER'
+                    ? 'Send Aadhaar Verification OTP'
+                    : recognizedCitizen
+                    ? `Send Login OTP for ${recognizedCitizen.fullName.split(' ')[0]}`
+                    : 'Send Login OTP'}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -453,6 +642,16 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
                   Enter the 6-digit verification code sent to{' '}
                   <span className="font-mono font-bold text-white">+91 {mobileNumber}</span>
                 </p>
+                {authMode === 'REGISTER' && fullName.trim() && (
+                  <p className="text-[11px] font-mono text-emerald-400">
+                    Registering: {fullName.trim()}
+                  </p>
+                )}
+                {authMode === 'LOGIN' && recognizedCitizen && (
+                  <p className="text-[11px] font-mono text-emerald-400">
+                    Signing in as: {recognizedCitizen.fullName}
+                  </p>
+                )}
               </div>
 
               {/* 6 Digit Input */}
@@ -478,7 +677,11 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
                       const code = Math.floor(100000 + Math.random() * 900000).toString();
                       setGeneratedOtp(code);
                       setResendTimer(30);
-                      setIncomingSmsToast(`[UIDAI] Your Aadhaar e-KYC OTP for JanRakshak registration is ${code}. Valid for 10 minutes. Do not share.`);
+                      const recipient =
+                        authMode === 'REGISTER'
+                          ? fullName.trim()
+                          : (recognizedCitizen ? recognizedCitizen.fullName : 'JanRakshak');
+                      setIncomingSmsToast(`[UIDAI] Your Aadhaar e-KYC OTP for ${recipient} is ${code}. Valid for 10 minutes. Do not share.`);
                     }}
                     disabled={resendTimer > 0}
                     className="text-blue-400 hover:text-blue-300 font-semibold disabled:opacity-40 cursor-pointer"
@@ -591,4 +794,3 @@ export const CitizenAuthDashboard: React.FC<CitizenAuthDashboardProps> = ({
     </div>
   );
 };
-

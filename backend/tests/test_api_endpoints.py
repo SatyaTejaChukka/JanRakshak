@@ -182,3 +182,81 @@ def test_aadhaar_otp_generation_and_verification():
     )
     assert master_verify_res.status_code == 200
     assert master_verify_res.json()["verified"] is True
+
+
+def test_citizen_registration_and_login_by_mobile_persistence():
+    """Ensure citizens who register with their phone number are recognized and logged in under their real identity."""
+    test_mobile = "9988776655"
+    test_name = "Ravi Teja"
+    test_aadhaar = "9988 7766 5544"
+    test_ward = "Ward 18 (AU South Campus & Siripuram)"
+
+    # 1. Registration flow
+    reg_otp_res = client.post(
+        "/api/v1/auth/aadhaar/generate-otp",
+        json={
+            "full_name": test_name,
+            "mobile_number": test_mobile,
+            "aadhaar_number": test_aadhaar,
+            "ward": test_ward,
+        },
+    )
+    assert reg_otp_res.status_code == 200
+    reg_otp_data = reg_otp_res.json()
+    reg_otp = reg_otp_data["debug_otp"]
+    reg_client_id = reg_otp_data["client_id"]
+
+    reg_verify_res = client.post(
+        "/api/v1/auth/aadhaar/verify-otp",
+        json={
+            "client_id": reg_client_id,
+            "otp": reg_otp,
+            "full_name": test_name,
+            "mobile_number": test_mobile,
+            "ward": test_ward,
+        },
+    )
+    assert reg_verify_res.status_code == 200
+    citizen = reg_verify_res.json()["citizen"]
+    assert citizen["fullName"] == test_name
+    assert citizen["mobileNumber"] == f"+91 {test_mobile}"
+    assert citizen["aadhaarNumber"] == "XXXX-XXXX-5544"
+    assert citizen["ward"] == test_ward
+
+    # 2. Lookup endpoint check
+    lookup_res = client.get(f"/api/v1/auth/aadhaar/lookup/{test_mobile}")
+    assert lookup_res.status_code == 200
+    lookup_data = lookup_res.json()
+    assert lookup_data["registered"] is True
+    assert lookup_data["citizen"]["fullName"] == test_name
+
+    # 3. Subsequent Login flow with ONLY mobile number (no full_name entered on Login tab)
+    login_otp_res = client.post(
+        "/api/v1/auth/aadhaar/generate-otp",
+        json={
+            "mobile_number": test_mobile,
+        },
+    )
+    assert login_otp_res.status_code == 200
+    login_otp_data = login_otp_res.json()
+    login_client_id = login_otp_data["client_id"]
+    login_otp = login_otp_data["debug_otp"]
+    assert test_name in login_otp_data["simulated_sms"]
+
+    # Verify login OTP without passing full_name
+    login_verify_res = client.post(
+        "/api/v1/auth/aadhaar/verify-otp",
+        json={
+            "client_id": login_client_id,
+            "otp": login_otp,
+            "mobile_number": test_mobile,
+        },
+    )
+    assert login_verify_res.status_code == 200
+    logged_in_citizen = login_verify_res.json()["citizen"]
+    # CRITICAL: Must be Ravi Teja, NOT K. Satyanarayana!
+    assert logged_in_citizen["fullName"] == test_name
+    assert logged_in_citizen["mobileNumber"] == f"+91 {test_mobile}"
+    assert logged_in_citizen["aadhaarNumber"] == "XXXX-XXXX-5544"
+    assert logged_in_citizen["ward"] == test_ward
+
