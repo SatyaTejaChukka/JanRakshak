@@ -3,7 +3,7 @@
  * Unified Desktop & Mobile Web Application Shell with RBAC
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ScreenId,
   UserRole,
@@ -17,8 +17,11 @@ import {
   UserProfile,
   ToastNotification,
   EmergencyBroadcast,
+  LiveGPSLocation,
+  GPSFixStatus,
 } from './types';
 import { UserAccountModal } from './components/UserAccountModal';
+import { LiveGPSPromptModal } from './components/LiveGPSPromptModal';
 import {
   INITIAL_TICKETS,
   INITIAL_ELDER_PROFILE,
@@ -295,6 +298,113 @@ export default function App() {
       bc?.close();
     };
   }, []);
+
+  // --------------------------------------------------------------------------
+  // Continuous Real-Time User GPS Tracking & Authorization Engine
+  // --------------------------------------------------------------------------
+  const [liveLocation, setLiveLocation] = useState<LiveGPSLocation | null>(() => {
+    try {
+      const cached = localStorage.getItem('janrakshak_live_user_coordinates');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return null;
+  });
+  const [gpsStatus, setGpsStatus] = useState<GPSFixStatus>('INITIALIZING');
+  const [showGpsModal, setShowGpsModal] = useState<boolean>(false);
+  const watchIdRef = useRef<number | null>(null);
+
+  const startContinuousLocationWatch = useCallback(() => {
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+      setGpsStatus('UNSUPPORTED');
+      return;
+    }
+
+    setGpsStatus('REQUESTING');
+
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        const loc: LiveGPSLocation = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          altitude: pos.coords.altitude,
+          speed: pos.coords.speed,
+          heading: pos.coords.heading,
+          timestamp: pos.timestamp || Date.now(),
+          source: 'GPS_HARDWARE',
+        };
+        setLiveLocation(loc);
+        setGpsStatus('LOCKED');
+        try {
+          localStorage.setItem('janrakshak_live_user_coordinates', JSON.stringify(loc));
+        } catch {}
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setGpsStatus('DENIED');
+          setShowGpsModal(true);
+        } else {
+          console.warn('[JanRakshak GPS] Watch error:', err.message);
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 3000,
+      }
+    );
+
+    watchIdRef.current = id;
+  }, []);
+
+  // Request GPS immediately when the application opens
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && 'permissions' in navigator && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' as PermissionName })
+        .then((result) => {
+          if (result.state === 'prompt') {
+            setShowGpsModal(true);
+          } else if (result.state === 'denied') {
+            setGpsStatus('DENIED');
+            setShowGpsModal(true);
+          }
+        })
+        .catch(() => {
+          setShowGpsModal(true);
+        });
+    } else {
+      setShowGpsModal(true);
+    }
+
+    startContinuousLocationWatch();
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, [startContinuousLocationWatch]);
+
+  const handleSetManualLocation = (lat: number, lng: number) => {
+    const manualLoc: LiveGPSLocation = {
+      latitude: lat,
+      longitude: lng,
+      accuracy: 5,
+      timestamp: Date.now(),
+      source: 'MANUAL',
+    };
+    setLiveLocation(manualLoc);
+    setGpsStatus('LOCKED');
+    try {
+      localStorage.setItem('janrakshak_live_user_coordinates', JSON.stringify(manualLoc));
+    } catch {}
+    showToast('success', 'Location Locked', `Position set to ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`);
+  };
 
 
   // Navigation History Stack & Intake Category State
@@ -823,6 +933,9 @@ export default function App() {
         officialSession={officialSession}
         onOpenAccount={() => setIsAccountModalOpen(true)}
         onLogout={currentRole === 'CITIZEN' ? handleCitizenLogout : handleOfficialLogout}
+        liveLocation={liveLocation}
+        gpsStatus={gpsStatus}
+        onOpenGPSModal={() => setShowGpsModal(true)}
       />
 
       {/* Real-Time Civil Defense Emergency Broadcast Alert Banner (Notifies all nearby citizens & users) */}
@@ -912,6 +1025,26 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-4 text-[11px] font-mono">
+          {/* Continuous Live GPS Fix Telemetry Badge */}
+          <button
+            type="button"
+            onClick={() => setShowGpsModal(true)}
+            className="flex items-center gap-1.5 bg-black/40 hover:bg-black/60 px-2.5 py-0.5 rounded border border-white/20 cursor-pointer transition-colors"
+            title="Click to view Live GPS diagnostics"
+          >
+            {liveLocation ? (
+              <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>GPS: {liveLocation.latitude.toFixed(4)}°N, {liveLocation.longitude.toFixed(4)}°E (±{Math.round(liveLocation.accuracy)}m)</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-amber-300 font-bold animate-pulse">
+                <LocateFixed className="w-3 h-3 text-amber-400" />
+                <span>GPS: ACQUIRING FIX...</span>
+              </span>
+            )}
+          </button>
+
           {isDisasterMode ? (
             <>
               <span className="flex items-center gap-1">
@@ -1153,6 +1286,8 @@ export default function App() {
               elderProfile={elderProfile}
               onNavigate={handleNavigate}
               onGoBack={handleGoBack}
+              liveLocation={liveLocation}
+              activeUser={currentUser}
             />
           )}
 
@@ -1161,6 +1296,7 @@ export default function App() {
               elderProfile={elderProfile}
               onNavigate={handleNavigate}
               onGoBack={handleGoBack}
+              liveLocation={liveLocation}
             />
           )}
 
@@ -1208,6 +1344,8 @@ export default function App() {
               targetShelterId={selectedShelterForNavigation}
               onNavigate={handleNavigate}
               onGoBack={handleGoBack}
+              liveLocation={liveLocation}
+              onRequestGPS={startContinuousLocationWatch}
             />
           )}
 
@@ -1221,6 +1359,7 @@ export default function App() {
               onGoBack={handleGoBack}
               onUpdateTicketPhoto={handleUpdateTicketPhoto}
               currentUser={currentUser}
+              liveLocation={liveLocation}
             />
           )}
 
@@ -1249,6 +1388,7 @@ export default function App() {
               onUpdateOccupancy={handleUpdateOccupancy}
               onGoBack={handleGoBack}
               onSelectShelterForNavigation={setSelectedShelterForNavigation}
+              liveLocation={liveLocation}
             />
           )}
         </main>
@@ -1273,6 +1413,16 @@ export default function App() {
           showToast('success', 'Profile Updated', `Account details for ${user.fullName} have been saved.`);
         }}
         onLogout={handleCitizenLogout}
+      />
+
+      {/* Live GPS Authorization & Continuous Positioning HUD Modal */}
+      <LiveGPSPromptModal
+        isOpen={showGpsModal}
+        onClose={() => setShowGpsModal(false)}
+        gpsStatus={gpsStatus}
+        liveLocation={liveLocation}
+        onRequestGPS={startContinuousLocationWatch}
+        onSetManualLocation={handleSetManualLocation}
       />
 
       {/* Mobile Sticky Bottom Floating Navigation Dock */}

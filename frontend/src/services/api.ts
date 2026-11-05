@@ -96,7 +96,12 @@ export const JanRakshakAPI = {
   },
 
   // --- Disaster & Emergency SOS ---
-  async triggerSOS(payload: { triggerType?: string; batteryPercentage?: number }): Promise<any> {
+  async triggerSOS(payload: {
+    triggerType?: string;
+    batteryPercentage?: number;
+    coordinates?: { latitude: number; longitude: number };
+    elderProfileId?: string;
+  }): Promise<any> {
     return safeFetch('/sos/trigger', {
       method: 'POST',
       body: JSON.stringify(payload),

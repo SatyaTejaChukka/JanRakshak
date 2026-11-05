@@ -42,6 +42,7 @@ class SOSResponse(BaseModel):
     assignedUnit: Optional[str] = None
     destinationShelter: Optional[str] = None
     timestamp: str
+    coordinates: Optional[Coordinates] = None
 
 
 class ProximityVolunteer(BaseModel):
@@ -88,4 +89,5 @@ class SOSIncidentSchema(BaseModel):
     assignedUnit: str
     status: str
     timestamp: str
+    coordinates: Optional[Coordinates] = None
 

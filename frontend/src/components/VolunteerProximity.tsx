@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { ScreenId, ElderProfile } from '../types';
+import { ScreenId, ElderProfile, LiveGPSLocation } from '../types';
 import {
   Users,
   ArrowLeft,
@@ -14,12 +14,14 @@ import {
   HeartHandshake,
   AlertOctagon,
   Compass,
+  LocateFixed,
 } from 'lucide-react';
 
 interface VolunteerProximityProps {
   elderProfile: ElderProfile;
   onNavigate: (screen: ScreenId) => void;
   onGoBack?: () => void;
+  liveLocation?: LiveGPSLocation | null;
 }
 
 interface Volunteer {
@@ -39,9 +41,12 @@ export const VolunteerProximity: React.FC<VolunteerProximityProps> = ({
   elderProfile,
   onNavigate,
   onGoBack,
+  liveLocation,
 }) => {
-  // Elder Home Coordinates (Sai Sagar Enclave, Coastal Battery Road, Ward 14)
-  const elderCoord: [number, number] = [17.7126, 83.3195];
+  // Elder Home Coordinates (Uses live GPS location if available)
+  const elderCoord: [number, number] = liveLocation
+    ? [liveLocation.latitude, liveLocation.longitude]
+    : [17.7126, 83.3195];
 
   const [volunteers, setVolunteers] = useState<Volunteer[]>([
     {
@@ -313,10 +318,9 @@ export const VolunteerProximity: React.FC<VolunteerProximityProps> = ({
                   <span className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                     {vol.name}
                     {vol.isVerified && (
-                      <CheckCircle2
-                        className="w-4 h-4 text-emerald-600 inline"
-                        
-                      />
+                      <span title="Verified Volunteer">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" />
+                      </span>
                     )}
                   </span>
                   <span

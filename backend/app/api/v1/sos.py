@@ -51,17 +51,23 @@ async def trigger_emergency_sos(payload: SOSTriggerRequest):
         first_vol["status"] = "En Route"
         first_vol["assignedIncidentId"] = sos_id
 
+    # Format real location using GPS coordinates if provided
+    loc_str = elder["address"]
+    if payload.coordinates:
+        loc_str = f"{payload.coordinates.latitude:.5f}° N, {payload.coordinates.longitude:.5f}° E ({elder.get('address', 'Live GPS Fix')})"
+
     # Record active SOS incident for NDRF War Room
     now_str = datetime.now(timezone.utc).strftime("%I:%M %p Today")
     incident = {
         "id": sos_id,
         "priority": "SEV-1 RED",
         "elderName": elder["fullName"],
-        "location": elder["address"],
+        "location": loc_str,
         "details": f"Urgent Evacuation ({payload.triggerType}). Oxygen / mobility support needed.",
         "assignedUnit": "NDRF 10th Bn IRB Boat #04",
         "status": "DISPATCHED",
         "timestamp": now_str,
+        "coordinates": payload.coordinates.model_dump() if hasattr(payload.coordinates, "model_dump") else payload.coordinates.dict() if payload.coordinates else None,
     }
     db_store.sos_incidents.insert(0, incident)
 
@@ -69,7 +75,7 @@ async def trigger_emergency_sos(payload: SOSTriggerRequest):
     sos_broadcast = {
         "id": f"BC-{random.randint(5000, 5999)}",
         "title": f"🚨 RESCUE ALERT: Elder SOS Dispatched ({elder['fullName']})",
-        "message": f"Senior citizen stranded at {elder['address']}. NDRF Boat Unit #04 & 7 nearby volunteers deployed.",
+        "message": f"Senior citizen stranded at {loc_str}. NDRF Boat Unit #04 & {len(db_store.active_volunteers)} nearby volunteers deployed.",
         "severity": "CRITICAL",
         "targetZone": elder.get("ward", "Ward 14 (Coastal Belt)"),
         "senderName": "State EOC / NDRF Emergency Mesh",
@@ -81,18 +87,19 @@ async def trigger_emergency_sos(payload: SOSTriggerRequest):
     }
     db_store.broadcasts.insert(0, sos_broadcast)
 
-    log_msg = f"[SOS-TRIGGER] Alert dispatched for {elder['fullName']} at {elder['address']} (Incident: {sos_id})"
+    log_msg = f"[SOS-TRIGGER] Alert dispatched for {elder['fullName']} at {loc_str} (Incident: {sos_id})"
     print(log_msg, flush=True)
 
     return SOSResponse(
         sosEventId=sos_id,
         status="DISPATCHED",
         elderName=elder["fullName"],
-        location=elder["address"],
+        location=loc_str,
         proximityVolunteerCount=len(db_store.active_volunteers),
         assignedUnit="NDRF 10th Bn IRB Boat #04",
         destinationShelter="Andhra University Indoor Sports Complex Hub",
         timestamp="Just now",
+        coordinates=payload.coordinates,
     )
 
 

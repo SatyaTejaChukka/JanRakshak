@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScreenId, UserRole, UserProfile } from '../types';
+import { ScreenId, UserRole, UserProfile, LiveGPSLocation, GPSFixStatus } from '../types';
 import {
   ShieldAlert,
   Flame,
@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   HardHat,
   Camera,
+  LocateFixed,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -43,6 +44,9 @@ interface NavbarProps {
   } | null;
   onOpenAccount?: () => void;
   onLogout?: () => void;
+  liveLocation?: LiveGPSLocation | null;
+  gpsStatus?: GPSFixStatus;
+  onOpenGPSModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -56,6 +60,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   officialSession,
   onOpenAccount,
   onLogout,
+  liveLocation,
+  gpsStatus,
+  onOpenGPSModal,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -212,6 +219,39 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Zone: Controls, Notifications, Identity, Mode Switcher */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Live GPS Fix Indicator Pill */}
+            {onOpenGPSModal && (
+              <button
+                type="button"
+                onClick={onOpenGPSModal}
+                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-bold rounded-lg border transition-all cursor-pointer shadow-2xs ${
+                  liveLocation
+                    ? 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border-emerald-300'
+                    : gpsStatus === 'REQUESTING'
+                    ? 'text-blue-800 bg-blue-50 hover:bg-blue-100 border-blue-300'
+                    : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300 animate-pulse'
+                }`}
+                title={
+                  liveLocation
+                    ? `Live Continuous GPS Lock: ${liveLocation.latitude.toFixed(5)}°N, ${liveLocation.longitude.toFixed(5)}°E (±${Math.round(liveLocation.accuracy)}m)`
+                    : 'Click to Enable Live GPS Location'
+                }
+              >
+                {liveLocation ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span className="hidden xl:inline">GPS:</span>
+                    <span>{liveLocation.latitude.toFixed(3)}°, {liveLocation.longitude.toFixed(3)}°</span>
+                  </>
+                ) : (
+                  <>
+                    <LocateFixed className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="hidden sm:inline">ENABLE GPS</span>
+                  </>
+                )}
+              </button>
+            )}
+
             {/* Language Switcher Pill (EN / తెలుగు) */}
             <button
               type="button"

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScreenId, ElderProfile } from '../types';
+import { ScreenId, ElderProfile, LiveGPSLocation, UserProfile } from '../types';
 import { JanRakshakAPI } from '../services/api';
 import {
   AlertTriangle,
@@ -13,15 +13,24 @@ import {
   Clock,
   Shield,
   Send,
+  LocateFixed,
 } from 'lucide-react';
 
 interface ElderSOSTriggerProps {
   elderProfile: ElderProfile;
   onNavigate: (screen: ScreenId) => void;
   onGoBack?: () => void;
+  liveLocation?: LiveGPSLocation | null;
+  activeUser?: UserProfile | null;
 }
 
-export const ElderSOSTrigger: React.FC<ElderSOSTriggerProps> = ({ elderProfile, onNavigate, onGoBack }) => {
+export const ElderSOSTrigger: React.FC<ElderSOSTriggerProps> = ({
+  elderProfile,
+  onNavigate,
+  onGoBack,
+  liveLocation,
+  activeUser,
+}) => {
   const [sosTriggered, setSosTriggered] = useState(false);
   const [selectedUrgency, setSelectedUrgency] = useState<'Oxygen & Critical Care' | 'Immediate Evacuation' | 'Waterlogged Ground Floor'>('Immediate Evacuation');
   const [alertDispatched, setAlertDispatched] = useState(false);
@@ -44,10 +53,13 @@ export const ElderSOSTrigger: React.FC<ElderSOSTriggerProps> = ({ elderProfile, 
         if (prev === 1) {
           clearInterval(interval);
           setAlertDispatched(true);
-          // Wire real emergency dispatch to FastAPI backend
+          // Wire real emergency dispatch to FastAPI backend with live GPS
           JanRakshakAPI.triggerSOS({
             triggerType: selectedUrgency,
             batteryPercentage: 88,
+            coordinates: liveLocation
+              ? { latitude: liveLocation.latitude, longitude: liveLocation.longitude }
+              : undefined,
           })
             .then((res) => {
               const eventId = res?.sosEventId || `ELD-${Math.floor(4100 + Math.random() * 800)}`;
@@ -64,15 +76,23 @@ export const ElderSOSTrigger: React.FC<ElderSOSTriggerProps> = ({ elderProfile, 
 
               // Real-Time Mesh Broadcast to NDRF War Room & Nearby Responders
               try {
+                const citizenName = activeUser?.fullName || elderProfile?.fullName || 'Stranded Citizen';
+                const locLabel = liveLocation
+                  ? `${liveLocation.latitude.toFixed(5)}° N, ${liveLocation.longitude.toFixed(5)}° E (${activeUser?.address || elderProfile?.address || 'Live GPS Fix'})`
+                  : elderProfile?.address || 'Coastal Battery Road Flat 302, Ward 14';
+
                 const sosIncident = {
                   id: eventId,
                   priority: 'SEV-1 RED',
-                  elderName: elderProfile?.fullName || 'Venkateswara Rao (Age 79)',
-                  location: elderProfile?.address || 'Coastal Battery Road Flat 302, Ward 14',
-                  details: `Critical SOS: ${selectedUrgency}. Oxygen / mobility support needed.`,
+                  elderName: citizenName,
+                  location: locLabel,
+                  details: `Critical SOS: ${selectedUrgency}. Life-safety rescue needed.`,
                   assignedUnit: assignedUnit,
                   status: 'DISPATCHED',
                   timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' Today',
+                  coordinates: liveLocation
+                    ? { latitude: liveLocation.latitude, longitude: liveLocation.longitude }
+                    : undefined,
                 };
 
                 // Save in local storage
@@ -119,8 +139,13 @@ export const ElderSOSTrigger: React.FC<ElderSOSTriggerProps> = ({ elderProfile, 
           <ArrowLeft className="w-4 h-4" />
           <span>Go Back</span>
         </button>
-        <span className="text-xs font-mono font-bold text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded">
-          GPS LOCK: ACCURACY ±3 METERS
+        <span className="text-xs font-mono font-bold text-red-700 bg-red-50 border border-red-300 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs">
+          <LocateFixed className="w-3.5 h-3.5 text-red-600 animate-pulse" />
+          <span>
+            {liveLocation
+              ? `LIVE GPS: ${liveLocation.latitude.toFixed(4)}°N, ${liveLocation.longitude.toFixed(4)}°E (±${Math.round(liveLocation.accuracy)}m)`
+              : 'GPS LOCK: ACQUIRING ACCURATE SATELLITE FIX...'}
+          </span>
         </span>
       </div>
 

@@ -75,7 +75,25 @@ export interface SOSIncident {
   assignedUnit: string;
   status: string;
   timestamp: string;
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
 }
+
+export interface LiveGPSLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  altitude?: number | null;
+  speed?: number | null;
+  heading?: number | null;
+  timestamp: number;
+  addressLabel?: string;
+  source: 'GPS_HARDWARE' | 'NETWORK' | 'MANUAL';
+}
+
+export type GPSFixStatus = 'INITIALIZING' | 'REQUESTING' | 'LOCKED' | 'DENIED' | 'UNSUPPORTED';
 
 
 export interface ElderProfile {

@@ -339,21 +339,30 @@ def test_emergency_broadcast_and_incidents():
     assert len(broadcasts) >= 1
     assert any(b["title"] == test_title for b in broadcasts)
 
-    # 3. Trigger Elder SOS and check active incidents
+    # 3. Trigger Elder SOS with real device coordinates
+    test_lat, test_lng = 17.72154, 83.31502
     sos_res = client.post(
         "/api/v1/sos/trigger",
-        json={"triggerType": "ONE_TAP_PANIC", "batteryPercentage": 82},
+        json={
+            "triggerType": "ONE_TAP_PANIC",
+            "batteryPercentage": 82,
+            "coordinates": {"latitude": test_lat, "longitude": test_lng},
+        },
     )
     assert sos_res.status_code == 201
     sos_data = sos_res.json()
     assert sos_data["status"] == "DISPATCHED"
+    assert sos_data["coordinates"]["latitude"] == test_lat
+    assert f"{test_lat:.5f}° N" in sos_data["location"]
 
-    # 4. Check that NDRF incidents list has this new incident
+    # 4. Check that NDRF incidents list has this new incident with real coordinates
     inc_res = client.get("/api/v1/sos/incidents")
     assert inc_res.status_code == 200
     incidents = inc_res.json()
     assert len(incidents) >= 1
-    assert any(i["id"] == sos_data["sosEventId"] for i in incidents)
+    matched = next((i for i in incidents if i["id"] == sos_data["sosEventId"]), None)
+    assert matched is not None
+    assert matched["coordinates"]["latitude"] == test_lat
 
 
 

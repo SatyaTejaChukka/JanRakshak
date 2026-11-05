@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { ScreenId, Shelter } from '../types';
+import { ScreenId, Shelter, LiveGPSLocation } from '../types';
 import { calculateShelterCapacity } from '../utils/logic';
+import { calculateHaversineDistance } from '../utils/routingEngine';
 import {
   ArrowLeft,
   Activity,
@@ -19,6 +20,7 @@ import {
   ShieldCheck,
   Users,
   Zap,
+  LocateFixed,
 } from 'lucide-react';
 
 interface CycloneReliefShelterProps {
@@ -27,6 +29,7 @@ interface CycloneReliefShelterProps {
   onUpdateOccupancy: (shelterId: string, delta: number) => void;
   onGoBack?: () => void;
   onSelectShelterForNavigation?: (shelterId: string) => void;
+  liveLocation?: LiveGPSLocation | null;
 }
 
 export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
@@ -35,22 +38,38 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
   onUpdateOccupancy,
   onGoBack,
   onSelectShelterForNavigation,
+  liveLocation,
 }) => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'nearby' | 'medical' | 'power' | 'pets'>('all');
 
+  // Compute dynamic shelter distances based on liveLocation if available
+  const sheltersWithDynamicDistance = useMemo(() => {
+    if (!liveLocation) return shelters;
+    return shelters.map((s) => {
+      const distM = calculateHaversineDistance(
+        { latitude: liveLocation.latitude, longitude: liveLocation.longitude },
+        s.coordinates
+      );
+      return {
+        ...s,
+        distanceKm: parseFloat((distM / 1000).toFixed(1)),
+      };
+    });
+  }, [shelters, liveLocation]);
+
   const recommendedShelter = useMemo(
     () =>
-      [...shelters].sort((a, b) => {
+      [...sheltersWithDynamicDistance].sort((a, b) => {
         const aSafe = a.safeRouteStatus === 'Clear & Elevated' ? 0 : 1;
         const bSafe = b.safeRouteStatus === 'Clear & Elevated' ? 0 : 1;
         return aSafe - bSafe || a.distanceKm - b.distanceKm;
       })[0],
-    [shelters]
+    [sheltersWithDynamicDistance]
   );
 
   const visibleShelters = useMemo(
     () =>
-      shelters
+      sheltersWithDynamicDistance
         .filter((shelter) => {
           if (activeFilter === 'nearby') return shelter.distanceKm < 3;
           if (activeFilter === 'medical') {
@@ -65,7 +84,7 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
           return true;
         })
         .sort((a, b) => a.distanceKm - b.distanceKm),
-    [activeFilter, shelters]
+    [activeFilter, sheltersWithDynamicDistance]
   );
 
   const totalCapacity = shelters.reduce((total, shelter) => total + shelter.totalCapacity, 0);

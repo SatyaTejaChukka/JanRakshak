@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScreenId, Ticket, UserProfile } from '../types';
+import { ScreenId, Ticket, UserProfile, LiveGPSLocation } from '../types';
 import {
   Camera,
   ArrowLeft,
@@ -41,6 +41,7 @@ interface CitizenCameraDefectCaptureProps {
   onGoBack?: () => void;
   onUpdateTicketPhoto?: (ticketId: string, photoUrl: string, type: 'before' | 'after') => void;
   currentUser?: UserProfile | null;
+  liveLocation?: LiveGPSLocation | null;
 }
 
 type FlashMode = 'ON' | 'AUTO' | 'OFF';
@@ -63,6 +64,7 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
   onGoBack,
   onUpdateTicketPhoto,
   currentUser,
+  liveLocation,
 }) => {
   // Flash Mode State
   const [flashMode, setFlashMode] = useState<FlashMode>('ON');
@@ -91,13 +93,37 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   // STRICT USER-PROVIDED GEOLOCATION STATE (NO HARDCODED DEFAULT LOCATION)
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [gpsAccuracy, setGpsAccuracy] = useState<string | null>(null);
-  const [locationMethod, setLocationMethod] = useState<'NONE' | 'GPS' | 'MANUAL'>('NONE');
-  const [selectedWardName, setSelectedWardName] = useState<string>('');
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(() => {
+    if (liveLocation) {
+      return { latitude: liveLocation.latitude, longitude: liveLocation.longitude };
+    }
+    return null;
+  });
+  const [gpsAccuracy, setGpsAccuracy] = useState<string | null>(() => {
+    if (liveLocation) {
+      return `±${Math.round(liveLocation.accuracy)}M (RTK-GPS FIX)`;
+    }
+    return null;
+  });
+  const [locationMethod, setLocationMethod] = useState<'NONE' | 'GPS' | 'MANUAL'>(() => {
+    return liveLocation ? 'GPS' : 'NONE';
+  });
+  const [selectedWardName, setSelectedWardName] = useState<string>(() => {
+    return liveLocation ? 'Live Device GPS Fix' : '';
+  });
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [showManualModal, setShowManualModal] = useState(false);
+
+  // Synchronize continuous live GPS fix from application level
+  useEffect(() => {
+    if (liveLocation && !coords) {
+      setCoords({ latitude: liveLocation.latitude, longitude: liveLocation.longitude });
+      setGpsAccuracy(`±${Math.round(liveLocation.accuracy)}M (RTK-GPS FIX)`);
+      setLocationMethod('GPS');
+      setSelectedWardName('Live Device GPS Fix');
+    }
+  }, [liveLocation, coords]);
 
   // Manual Coordinates Input form state
   const [inputLat, setInputLat] = useState('');

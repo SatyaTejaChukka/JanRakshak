@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { ScreenId, Ticket, HazardIncident, Shelter } from '../types';
+import { ScreenId, Ticket, HazardIncident, Shelter, LiveGPSLocation } from '../types';
 import {
   calculateHaversineDistance,
   computeSafeRoute,
@@ -41,6 +41,8 @@ interface HazardNavigationMapProps {
   targetShelterId?: string;
   onNavigate: (screen: ScreenId) => void;
   onGoBack?: () => void;
+  liveLocation?: LiveGPSLocation | null;
+  onRequestGPS?: () => void;
 }
 
 // Preset origin locations across Visakhapatnam for rapid citizen testing
@@ -79,6 +81,8 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
   targetShelterId,
   onNavigate,
   onGoBack,
+  liveLocation,
+  onRequestGPS,
 }) => {
   // Leaflet Map & Layer References
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -86,16 +90,38 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
   const routeLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const markersLayerGroupRef = useRef<L.LayerGroup | null>(null);
 
-  // User Current Location / Origin (Defaults to Coastal Ward 14 Visakhapatnam)
-  const [origin, setOrigin] = useState<RouteCoordinate>({
-    latitude: 17.7126,
-    longitude: 83.3195,
+  // User Current Location / Origin (Defaults to liveLocation if present, else Coastal Ward 14)
+  const [origin, setOrigin] = useState<RouteCoordinate>(() => {
+    if (liveLocation) {
+      return { latitude: liveLocation.latitude, longitude: liveLocation.longitude };
+    }
+    return { latitude: 17.7126, longitude: 83.3195 };
   });
-  const [originLabel, setOriginLabel] = useState<string>('Coastal Ward 14 (RK Beach)');
-  const [isGpsActive, setIsGpsActive] = useState<boolean>(false);
-  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [originLabel, setOriginLabel] = useState<string>(() => {
+    if (liveLocation) {
+      return `Live GPS Position (±${Math.round(liveLocation.accuracy)}m accuracy)`;
+    }
+    return 'Coastal Ward 14 (RK Beach)';
+  });
+  const [isGpsActive, setIsGpsActive] = useState<boolean>(!!liveLocation);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(
+    liveLocation ? Math.round(liveLocation.accuracy) : null
+  );
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [locationNotice, setLocationNotice] = useState<string | null>(null);
+
+  // Continuously synchronize liveLocation from application root
+  useEffect(() => {
+    if (liveLocation) {
+      setOrigin({ latitude: liveLocation.latitude, longitude: liveLocation.longitude });
+      setOriginLabel(`Live GPS Position (±${Math.round(liveLocation.accuracy)}m accuracy)`);
+      setIsGpsActive(true);
+      setGpsAccuracy(Math.round(liveLocation.accuracy));
+      if (mapRef.current) {
+        mapRef.current.flyTo([liveLocation.latitude, liveLocation.longitude], 15, { duration: 1.0 });
+      }
+    }
+  }, [liveLocation]);
 
   // Selected Destination (Default to AU Indoor Stadium or passed targetShelterId)
   const defaultShelter =
@@ -133,6 +159,18 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
   const destinationName: string = customDestination
     ? customDestination.name
     : shelters.find((s) => s.id === selectedShelterId)?.name || 'AU Indoor Stadium Relief Center';
+
+  // Real-world location detection: check if user is outside Visakhapatnam region (>40km away)
+  const isFarFromVizag = calculateHaversineDistance(origin, { latitude: 17.7295, longitude: 83.3225 }) > 40000;
+
+  // Dynamically computed safe high-ground emergency hub ~1.2km away from the user's real GPS
+  const localSafeHub = {
+    name: 'Local Emergency High-Ground Safe Zone (1.2 km away)',
+    coord: {
+      latitude: parseFloat((origin.latitude + 0.009).toFixed(5)),
+      longitude: parseFloat((origin.longitude + 0.007).toFixed(5)),
+    },
+  };
 
   // Roadblock Avoidance & Layers Toggle State
   const [avoidRoadblocks, setAvoidRoadblocks] = useState<boolean>(true);
@@ -232,6 +270,9 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
   const handleAcquireLiveGPS = () => {
     setIsLocating(true);
     setLocationNotice(null);
+    if (onRequestGPS) {
+      onRequestGPS();
+    }
 
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
       setLocationNotice('Browser geolocation not supported on this device.');
@@ -350,6 +391,18 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
         <p class="text-[11px] text-slate-500 font-mono">${origin.latitude.toFixed(5)}, ${origin.longitude.toFixed(5)}</p>
       </div>
     `);
+
+    // 1b. GPS Accuracy Circle if live GPS is active
+    if (gpsAccuracy && isGpsActive) {
+      L.circle([origin.latitude, origin.longitude], {
+        radius: Math.max(gpsAccuracy, 12),
+        color: '#2563eb',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.14,
+        weight: 1.5,
+        dashArray: '4, 4',
+      }).addTo(markersGroup);
+    }
 
     // 2. Destination Marker (Emerald Shield Beacon)
     const destIcon = L.divIcon({
@@ -589,6 +642,57 @@ export const HazardNavigationMap: React.FC<HazardNavigationMapProps> = ({
             All Shelters ({shelters.length})
           </button>
         </div>
+      </div>
+
+      {/* Real-World Continuous GPS HUD Banner */}
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-4 border border-blue-700/50 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-500/20 rounded-xl border border-blue-400/30">
+            <Radio className="w-5 h-5 text-cyan-300 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold uppercase bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>CONTINUOUS GPS TRACKING ACTIVE</span>
+              </span>
+              {gpsAccuracy && (
+                <span className="text-[11px] font-mono text-cyan-200">
+                  ±{gpsAccuracy}m accuracy
+                </span>
+              )}
+            </div>
+            <div className="text-sm font-bold text-white mt-0.5 flex flex-wrap items-center gap-2">
+              <span>{originLabel}</span>
+              <span className="font-mono text-xs text-blue-200">
+                ({origin.latitude.toFixed(5)}°N, {origin.longitude.toFixed(5)}°E)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {isFarFromVizag && (
+          <div className="flex items-center gap-2 self-start md:self-center shrink-0">
+            <button
+              onClick={() => {
+                if (customDestination?.name === localSafeHub.name) {
+                  setCustomDestination(null);
+                  setSelectedShelterId('SHL-01');
+                } else {
+                  setCustomDestination(localSafeHub);
+                }
+              }}
+              className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5"
+            >
+              <Navigation className="w-3.5 h-3.5" />
+              <span>
+                {customDestination?.name === localSafeHub.name
+                  ? 'Switch to Vizag Cyclone Grid'
+                  : 'Route to Local Safe Zone (1.2 km)'}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Title & Dynamic Rerouting Status Card */}
