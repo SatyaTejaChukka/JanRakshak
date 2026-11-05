@@ -17,12 +17,14 @@ import {
   AlertTriangle,
   Trees,
   Lightbulb,
-  Trash2,
-  Droplets,
   Radio,
   User,
   Clock,
   Compass,
+  MapPinOff,
+  Crosshair,
+  Edit3,
+  X,
 } from 'lucide-react';
 import { checkSpatialDeduplication } from '../utils/logic';
 
@@ -35,6 +37,14 @@ interface CitizenCameraDefectCaptureProps {
 
 type FlashMode = 'ON' | 'AUTO' | 'OFF';
 type UrgencyLevel = 'Minor Slow' | 'Traffic Block' | 'Accident Risk';
+
+const VISAKHAPATNAM_WARS = [
+  { name: 'GVMC Ward 18 • Waltair', lat: 17.7215, lng: 83.315 },
+  { name: 'GVMC Ward 14 • Beach Road / RK Beach', lat: 17.7126, lng: 83.3218 },
+  { name: 'GVMC Ward 12 • Peda Waltair & Lawsons Bay', lat: 17.7412, lng: 83.3421 },
+  { name: 'GVMC Ward 16 • Siripuram Junction', lat: 17.7291, lng: 83.3225 },
+  { name: 'GVMC Ward 09 • MVP Colony Sector 4', lat: 17.7384, lng: 83.3341 },
+];
 
 export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProps> = ({
   existingTickets,
@@ -62,31 +72,24 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // GPS Coordinates (Default: Visakhapatnam GVMC Ward 18, Waltair, updated via browser Geolocation)
-  const [coords, setCoords] = useState({ latitude: 17.7215, longitude: 83.315 });
-  const [gpsAccuracy, setGpsAccuracy] = useState('±0.04M (RTK-GPS)');
+  // STRICT USER-PROVIDED GEOLOCATION STATE (NO HARDCODED DEFAULT LOCATION)
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [gpsAccuracy, setGpsAccuracy] = useState<string | null>(null);
+  const [locationMethod, setLocationMethod] = useState<'NONE' | 'GPS' | 'MANUAL'>('NONE');
+  const [selectedWardName, setSelectedWardName] = useState<string>('');
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [showManualModal, setShowManualModal] = useState(false);
+
+  // Manual Coordinates Input form state
+  const [inputLat, setInputLat] = useState('');
+  const [inputLng, setInputLng] = useState('');
+  const [inputWard, setInputWard] = useState('GVMC Ward 18 • Waltair');
 
   // Current live timestamp
   const [currentTimeStr, setCurrentTimeStr] = useState('26 OCT 2026 • 15:42:19 IST');
 
   useEffect(() => {
-    // Attempt browser Geolocation API
-    if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setCoords({
-            latitude: parseFloat(pos.coords.latitude.toFixed(4)),
-            longitude: parseFloat(pos.coords.longitude.toFixed(4)),
-          });
-          setGpsAccuracy(`±${pos.coords.accuracy ? Math.min(pos.coords.accuracy, 4).toFixed(1) : '1.2'}M`);
-        },
-        () => {
-          // Default Visakhapatnam coordinates preserved
-        },
-        { enableHighAccuracy: true, timeout: 4000 }
-      );
-    }
-
     const updateTime = () => {
       const now = new Date();
       const options: Intl.DateTimeFormatOptions = {
@@ -105,13 +108,15 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
     return () => clearInterval(interval);
   }, []);
 
-  // Spatial Deduplication Detection
+  // Spatial Deduplication Detection (Only evaluates once citizen has provided location)
   const mappedReports = existingTickets.map((t) => ({
     id: t.id,
     location: t.coordinates,
     category: t.category,
   }));
-  const dedupResult = checkSpatialDeduplication(coords, category, mappedReports);
+  const dedupResult = coords
+    ? checkSpatialDeduplication(coords, category, mappedReports)
+    : { isDuplicate: false, parentTicketId: undefined, duplicateId: undefined };
   const isNearDuplicate = dedupResult.isDuplicate;
   const duplicateId = dedupResult.parentTicketId || dedupResult.duplicateId || 'TKT-8902';
 
@@ -147,7 +152,7 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
           recognition.onerror = () => {
             setLandmark((prev) =>
               prev
-                ? `${prev}, Beach Road Junction`
+                ? `${prev}, Main Junction`
                 : 'Opposite Waltair Post Office / Near SBI ATM, Main Junction'
             );
             setIsListening(false);
@@ -175,6 +180,74 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
     } else {
       setIsListening(false);
     }
+  };
+
+  // Acquire Live GPS from device
+  const handleAcquireLiveGPS = () => {
+    setIsLocating(true);
+    setLocationError(null);
+
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      setIsLocating(false);
+      setLocationError('Browser Geolocation is not supported on this device. Please input coordinates manually.');
+      setShowManualModal(true);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = parseFloat(pos.coords.latitude.toFixed(5));
+        const lng = parseFloat(pos.coords.longitude.toFixed(5));
+        const acc = pos.coords.accuracy ? Math.min(pos.coords.accuracy, 15).toFixed(1) : '1.5';
+
+        setCoords({ latitude: lat, longitude: lng });
+        setGpsAccuracy(`±${acc}M (RTK-GPS FIX)`);
+        setLocationMethod('GPS');
+        setSelectedWardName('GVMC WARD 18 • WALTAIR');
+        setIsLocating(false);
+        setLocationError(null);
+      },
+      (err) => {
+        setIsLocating(false);
+        let errorMsg = 'GPS location acquisition failed.';
+        if (err.code === err.PERMISSION_DENIED) {
+          errorMsg = 'GPS permission was denied by user. You must provide coordinates manually to report a defect.';
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          errorMsg = 'Satellite location unavailable. Please enter coordinates manually.';
+        } else if (err.code === err.TIMEOUT) {
+          errorMsg = 'GPS signal timed out. Please enter coordinates manually.';
+        }
+        setLocationError(errorMsg);
+        setShowManualModal(true);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
+  };
+
+  // Submit Manual Coordinates
+  const handleConfirmManualCoords = (e: React.FormEvent) => {
+    e.preventDefault();
+    const lat = parseFloat(inputLat);
+    const lng = parseFloat(inputLng);
+
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      setLocationError('Invalid coordinates. Latitude must be between -90 and 90, Longitude between -180 and 180.');
+      return;
+    }
+
+    setCoords({ latitude: lat, longitude: lng });
+    setGpsAccuracy('±2.5M (MANUAL GIS FIX)');
+    setLocationMethod('MANUAL');
+    setSelectedWardName(inputWard);
+    setShowManualModal(false);
+    setLocationError(null);
+  };
+
+  // Quick Preset Selection in Modal
+  const handleSelectPresetWard = (preset: { name: string; lat: number; lng: number }) => {
+    setInputLat(preset.lat.toString());
+    setInputLng(preset.lng.toString());
+    setInputWard(preset.name);
   };
 
   // Categories configuration with icons
@@ -210,8 +283,13 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
     },
   ];
 
-  // Handle Form Submission
+  // Handle Form Submission (STRICTLY BLOCKED IF NO LOCATION PROVIDED)
   const handleSubmitReport = () => {
+    if (!coords) {
+      setLocationError('Location is strictly mandatory. Please acquire GPS or enter coordinates manually.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     setTimeout(() => {
@@ -235,7 +313,7 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
           id: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
           category,
           title: landmark ? `${category} - ${landmark}` : defectTitle,
-          location: 'GVMC Ward 18, Waltair, Visakhapatnam',
+          location: `${selectedWardName || 'GVMC Jurisdiction'}, Visakhapatnam`,
           coordinates: coords,
           reportedAt: 'Just now',
           currentStage: 'submitted',
@@ -272,9 +350,19 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
             </button>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-                <span className="text-[11px] font-mono font-bold text-red-600 uppercase tracking-wider">
-                  RTK GPS FIX • 0.04M ACC
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    coords ? 'bg-emerald-500 animate-pulse' : 'bg-red-600 animate-ping'
+                  }`}
+                ></span>
+                <span
+                  className={`text-[11px] font-mono font-bold uppercase tracking-wider ${
+                    coords ? 'text-emerald-700' : 'text-red-600'
+                  }`}
+                >
+                  {coords
+                    ? `RTK GPS FIX • ${gpsAccuracy || 'ACTIVE'}`
+                    : 'NO GPS FIX • LOCATION REQUIRED'}
                 </span>
               </div>
               <h1 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight leading-tight">
@@ -288,7 +376,13 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
               <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">
                 SAT LINK
               </span>
-              <span className="text-xs font-mono font-extrabold text-blue-700">98.4 dBm</span>
+              <span
+                className={`text-xs font-mono font-extrabold ${
+                  coords ? 'text-blue-700' : 'text-amber-600'
+                }`}
+              >
+                {coords ? '98.4 dBm' : 'STANDBY'}
+              </span>
             </div>
             <div className="w-9 h-9 rounded-full bg-blue-700 text-white flex items-center justify-center shrink-0 shadow-xs">
               <User className="w-5 h-5 text-white" />
@@ -344,31 +438,83 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
             </button>
           </div>
 
-          {/* Geolocation & Municipal Spatial Resolution Banner */}
-          <div className="w-full bg-slate-800/90 border border-slate-700/80 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-[11px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
-                  GPS LOCKED: {coords.latitude.toFixed(4)}° N, {coords.longitude.toFixed(4)}° E
+          {/* GEOLOCATION HUD BANNER (STRICT USER-PROVIDED REQUIREMENT) */}
+          {coords ? (
+            <div className="w-full bg-slate-800/90 border border-emerald-500/40 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="text-[11px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                    GPS LOCKED: {coords.latitude.toFixed(5)}° N, {coords.longitude.toFixed(5)}° E
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-slate-300 tracking-tight">
+                    {gpsAccuracy}
+                  </span>
+                  <button
+                    onClick={() => setShowManualModal(true)}
+                    className="text-[10px] text-sky-400 hover:text-sky-300 underline font-mono cursor-pointer"
+                  >
+                    Change
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-slate-700/50">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-900 text-sky-400 text-xs font-semibold">
+                  <Compass className="w-3.5 h-3.5" />
+                  <span className="text-[11px] font-mono uppercase tracking-wider">
+                    {selectedWardName || 'GVMC MUNICIPAL WARD'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-300 tracking-wider uppercase">
+                  GEO-TELEMETRY VERIFIED
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-slate-400 tracking-tight">
-                ACCURACY {gpsAccuracy}
-              </span>
             </div>
-            <div className="flex items-center justify-between pt-1 border-t border-slate-700/50">
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-900 text-sky-400 text-xs font-semibold">
-                <Compass className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-mono uppercase tracking-wider">
-                  GVMC WARD 18 • WALTAIR
+          ) : (
+            <div className="w-full bg-red-950/80 border-2 border-red-500/80 rounded-xl p-3.5 flex flex-col gap-2.5 shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-red-500 animate-ping"></span>
+                  <span className="text-xs font-mono font-extrabold text-red-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPinOff className="w-4 h-4 text-red-400" />
+                    <span>LOCATION REQUIRED • NO DEFAULT LOCATION PERMITTED</span>
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono font-bold bg-red-500 text-white px-2 py-0.5 rounded">
+                  MANDATORY
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-slate-300 tracking-wider uppercase">
-                ZONE-III VISAKHAPATNAM
-              </span>
+              <p className="text-xs text-red-200 leading-snug">
+                You must provide an authenticated geographic coordinate to register a civic defect. Tap below to acquire live GPS or enter coordinates manually.
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleAcquireLiveGPS}
+                  disabled={isLocating}
+                  className="px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                >
+                  <Crosshair className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                  <span>{isLocating ? 'Acquiring RTK Fix...' : 'Acquire Live GPS Fix'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowManualModal(true)}
+                  className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Enter Coordinates Manually</span>
+                </button>
+              </div>
+              {locationError && (
+                <p className="text-[11px] font-mono text-amber-300 pt-1 border-t border-red-900/60">
+                  {locationError}
+                </p>
+              )}
             </div>
-          </div>
+          )}
 
           {/* 4:3 Aspect Ratio Camera Reticle Viewport */}
           <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl select-none">
@@ -471,7 +617,9 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
                 {currentTimeStr}
               </p>
               <p className="text-[10px] font-mono text-slate-300 tracking-tight">
-                RTK-SURV FIX #GVMC-8812 • 48MP
+                {coords
+                  ? `FIX ${coords.latitude.toFixed(4)}N, ${coords.longitude.toFixed(4)}E`
+                  : 'AWAITING USER GEOLOCATION'}
               </p>
             </div>
 
@@ -480,10 +628,9 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
               <ShieldCheck className="w-5 h-5 text-amber-500 shrink-0" />
               <span className="text-[11px] text-slate-300 leading-tight">
                 <strong className="text-white uppercase font-bold">
-                  Live capture mandatory.
+                  Live capture & Verified GPS mandatory.
                 </strong>{' '}
-                Defect must be clearly visible. Gallery uploads permanently disabled for
-                anti-fraud verification.
+                Defects cannot be processed without authenticated coordinates.
               </span>
             </div>
           </div>
@@ -549,7 +696,7 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
                 type="text"
                 value={landmark}
                 onChange={(e) => setLandmark(e.target.value)}
-                placeholder="Opposite Waltair Post Office / SBI ATM..."
+                placeholder="Opposite Waltair Post Office / Near SBI ATM..."
                 className="w-full h-12 bg-transparent pr-12 text-slate-900 placeholder:text-slate-400 text-sm font-medium focus:outline-none"
               />
               {/* Microphone Voice Assist Button */}
@@ -623,15 +770,15 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
             </div>
           </div>
 
-          {/* 50m Spatial Deduplication Notice */}
-          {isNearDuplicate && (
+          {/* 50m Spatial Deduplication Notice (if location provided and match found) */}
+          {coords && isNearDuplicate && (
             <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 flex items-start gap-3 shadow-xs">
               <Layers className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
               <div className="text-xs space-y-1 text-blue-900">
                 <div className="font-bold flex items-center gap-2">
                   <span>50m Spatial Cluster Found ({duplicateId})</span>
                   <span className="font-mono bg-blue-200/80 text-blue-900 px-2 py-0.5 rounded text-[10px] font-bold">
-                    18m Distance
+                    Nearby Distance Match
                   </span>
                 </div>
                 <p className="text-blue-800 leading-relaxed">
@@ -643,43 +790,78 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
             </div>
           )}
 
-          {/* Primary Action Trigger & Shutter Snap Button */}
+          {/* Primary Action Trigger & Shutter Snap Button (STRICTLY DISABLED IF NO LOCATION) */}
           <div className="pt-2 flex flex-col gap-3 w-full">
-            <button
-              type="button"
-              disabled={isSubmitting || submitSuccess}
-              onClick={handleSubmitReport}
-              className={`w-full min-h-[54px] rounded-xl font-bold text-sm flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] transition-all cursor-pointer ${
-                submitSuccess
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  <span>Encrypting & Caching Ticket...</span>
-                </>
-              ) : submitSuccess ? (
-                <>
-                  <CheckCircle2 className="w-5 h-5 text-white" />
-                  <span>
-                    {isNearDuplicate
-                      ? 'Merged into Master Work Order'
-                      : 'Report Dispatched to GVMC'}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Camera className="w-5 h-5" />
-                  <span className="tracking-wide">
-                    {isNearDuplicate
-                      ? 'Snap Photo & Merge with Master Ticket'
-                      : 'Snap & Submit Report'}
-                  </span>
-                </>
-              )}
-            </button>
+            {coords ? (
+              <button
+                type="button"
+                disabled={isSubmitting || submitSuccess}
+                onClick={handleSubmitReport}
+                className={`w-full min-h-[54px] rounded-xl font-bold text-sm flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] transition-all cursor-pointer ${
+                  submitSuccess
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    <span>Encrypting & Caching Ticket...</span>
+                  </>
+                ) : submitSuccess ? (
+                  <>
+                    <CheckCircle2 className="w-5 h-5 text-white" />
+                    <span>
+                      {isNearDuplicate
+                        ? 'Merged into Master Work Order'
+                        : 'Report Dispatched to GVMC'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-5 h-5" />
+                    <span className="tracking-wide">
+                      {isNearDuplicate
+                        ? 'Snap Photo & Merge with Master Ticket'
+                        : 'Snap & Submit Report'}
+                    </span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled={true}
+                  className="w-full min-h-[54px] rounded-xl font-bold text-sm flex items-center justify-center gap-2.5 bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300"
+                >
+                  <MapPinOff className="w-5 h-5 text-red-500" />
+                  <span>Location Required to Submit Report</span>
+                </button>
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Provide location to unlock submission:</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleAcquireLiveGPS}
+                      className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-[11px] cursor-pointer"
+                    >
+                      Acquire GPS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowManualModal(true)}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded text-[11px] cursor-pointer"
+                    >
+                      Manual Entry
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Offline GovTech Mesh Resilience Banner */}
             <div className="w-full rounded-xl bg-slate-100 border border-slate-200/80 p-3.5 flex items-start gap-3">
@@ -697,6 +879,113 @@ export const CitizenCameraDefectCapture: React.FC<CitizenCameraDefectCaptureProp
           </div>
         </section>
       </main>
+
+      {/* MANUAL COORDINATES ENTRY MODAL (STRICT CITIZEN-ENTERED LOCATION) */}
+      {showManualModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Crosshair className="w-5 h-5 text-blue-600" />
+                <h3 className="text-base font-extrabold text-slate-900">
+                  Provide Incident Geolocation
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManualModal(false)}
+                className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Defect reports require verified spatial coordinates for work crew dispatch and 50m clustering. Enter GPS coordinates or select your municipal ward location below:
+            </p>
+
+            {/* Quick Municipal Ward Landmark Presets */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Quick Select Landmark Location:
+              </label>
+              <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto">
+                {VISAKHAPATNAM_WARS.map((ward) => (
+                  <button
+                    key={ward.name}
+                    type="button"
+                    onClick={() => handleSelectPresetWard(ward)}
+                    className={`p-2.5 rounded-lg border text-left text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                      inputWard === ward.name
+                        ? 'bg-blue-50 border-blue-500 text-blue-900 font-bold'
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <span>{ward.name}</span>
+                    <span className="font-mono text-[10px] text-slate-400">
+                      {ward.lat.toFixed(4)}, {ward.lng.toFixed(4)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Manual Lat/Lng Fields */}
+            <form onSubmit={handleConfirmManualCoords} className="space-y-3 pt-2 border-t border-slate-100">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase font-mono">
+                    Latitude (°N)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    placeholder="17.7215"
+                    value={inputLat}
+                    onChange={(e) => setInputLat(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-blue-600 font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase font-mono">
+                    Longitude (°E)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    placeholder="83.3150"
+                    value={inputLng}
+                    onChange={(e) => setInputLng(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-blue-600 font-mono"
+                  />
+                </div>
+              </div>
+
+              {locationError && (
+                <p className="text-xs text-red-600 font-medium">{locationError}</p>
+              )}
+
+              <div className="pt-2 flex items-center gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  Confirm & Set Location
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowManualModal(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
