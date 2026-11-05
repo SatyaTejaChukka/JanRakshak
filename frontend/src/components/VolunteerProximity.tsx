@@ -315,7 +315,7 @@ export const VolunteerProximity: React.FC<VolunteerProximityProps> = ({
                     {vol.isVerified && (
                       <CheckCircle2
                         className="w-4 h-4 text-emerald-600 inline"
-                        title="Verified Volunteer"
+                        
                       />
                     )}
                   </span>

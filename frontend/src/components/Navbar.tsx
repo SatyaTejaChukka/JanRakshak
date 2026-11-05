@@ -24,6 +24,7 @@ import {
   Languages,
   CheckCircle2,
   HardHat,
+  Camera,
 } from 'lucide-react';
 
 interface NavbarProps {

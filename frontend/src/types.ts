@@ -47,6 +47,7 @@ export interface Ticket {
     phone: string;
     checkedInTime?: string;
   };
+  targetSlaHours?: number;
   beforeImageUrl?: string;
   afterImageUrl?: string;
   targetSlaHours?: number;
