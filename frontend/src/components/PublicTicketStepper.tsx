@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
 import { ScreenId, Ticket } from '../types';
 import {
   ArrowLeft,
@@ -9,7 +10,8 @@ import {
   Check,
   MapPin,
   HardHat,
-  Hub,
+  Upload,
+  RefreshCw,
   Navigation,
   ThumbsUp,
   ThumbsDown,
@@ -27,9 +29,16 @@ import {
 interface PublicTicketStepperProps {
   ticket: Ticket;
   onNavigate: (screen: ScreenId) => void;
+  onGoBack?: () => void;
+  onUpdateTicketPhoto?: (ticketId: string, photoUrl: string, type: 'before' | 'after') => void;
 }
 
-export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket, onNavigate }) => {
+export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({
+  ticket,
+  onNavigate,
+  onGoBack,
+  onUpdateTicketPhoto,
+}) => {
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
@@ -37,6 +46,159 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
   const [yesVotes, setYesVotes] = useState(14);
   const [noVotes, setNoVotes] = useState(1);
   const [isSubscribed, setIsSubscribed] = useState(false);
+
+  // Real Photo Upload and Synchronization Refs & State
+  const beforeFileInputRef = React.useRef<HTMLInputElement>(null);
+  const afterFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const getSavedPhoto = (type: 'before' | 'after') => {
+    try {
+      return localStorage.getItem(`janrakshak_photo_${type}_${ticket.id}`) || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const [beforePhoto, setBeforePhoto] = useState<string | null>(
+    ticket.beforeImageUrl || getSavedPhoto('before')
+  );
+  const [afterPhoto, setAfterPhoto] = useState<string | null>(
+    ticket.afterImageUrl || getSavedPhoto('after')
+  );
+
+  // Real GIS Leaflet Mini-Map Initialization (Streets & Satellite View - 100% Free & Unwatermarked)
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const [miniMapMode, setMiniMapMode] = useState<'streets' | 'satellite'>('satellite');
+
+  const TILE_URLS = {
+    streets: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  };
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const lat = ticket.coordinates?.latitude || 17.7126;
+    const lng = ticket.coordinates?.longitude || 83.3218;
+
+    if (!mapRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        center: [lat, lng],
+        zoom: 17,
+        zoomControl: false,
+        attributionControl: false,
+      });
+
+      const initialTile = L.tileLayer(TILE_URLS[miniMapMode], {
+        maxZoom: 19,
+      }).addTo(map);
+      tileLayerRef.current = initialTile;
+
+      // 40m Cluster Perimeter Circle
+      L.circle([lat, lng], {
+        radius: 40,
+        color: '#f59e0b',
+        fillColor: '#f59e0b',
+        fillOpacity: 0.22,
+        weight: 2.5,
+        dashArray: '4, 4',
+      }).addTo(map);
+
+      // Geotagged Defect Beacon
+      const ticketIcon = L.divIcon({
+        className: 'bg-transparent',
+        html: `
+          <div class="relative flex items-center justify-center w-8 h-8">
+            <div class="absolute w-8 h-8 rounded-full bg-blue-500/35 animate-ping"></div>
+            <div class="relative w-6 h-6 rounded-full bg-blue-600 border-2 border-white shadow-xl flex items-center justify-center text-white font-bold text-[9px]">
+              📍
+            </div>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+
+      L.marker([lat, lng], { icon: ticketIcon })
+        .addTo(map)
+        .bindPopup(`
+          <div class="p-1 text-slate-900 font-sans text-xs">
+            <strong>${ticket.id}</strong><br/>
+            <span>${ticket.title}</span><br/>
+            <span class="text-[11px] text-slate-500">${ticket.location}</span>
+          </div>
+        `);
+
+      mapRef.current = map;
+    } else {
+      mapRef.current.setView([lat, lng], 17);
+    }
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [ticket.id, ticket.coordinates?.latitude, ticket.coordinates?.longitude]);
+
+  // Update Mini-Map Tile Layer when Switching Streets <-> Satellite View
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (tileLayerRef.current) {
+      mapRef.current.removeLayer(tileLayerRef.current);
+    }
+    const newTile = L.tileLayer(TILE_URLS[miniMapMode], {
+      maxZoom: 19,
+    }).addTo(mapRef.current);
+    tileLayerRef.current = newTile;
+  }, [miniMapMode]);
+
+  useEffect(() => {
+    setBeforePhoto(ticket.beforeImageUrl || getSavedPhoto('before'));
+    setAfterPhoto(ticket.afterImageUrl || getSavedPhoto('after'));
+  }, [ticket.id, ticket.beforeImageUrl, ticket.afterImageUrl]);
+
+  const handleBeforePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        const dataUrl = reader.result;
+        setBeforePhoto(dataUrl);
+        ticket.beforeImageUrl = dataUrl;
+        try {
+          localStorage.setItem(`janrakshak_photo_before_${ticket.id}`, dataUrl);
+        } catch {}
+        if (onUpdateTicketPhoto) {
+          onUpdateTicketPhoto(ticket.id, dataUrl, 'before');
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAfterPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        const dataUrl = reader.result;
+        setAfterPhoto(dataUrl);
+        ticket.afterImageUrl = dataUrl;
+        try {
+          localStorage.setItem(`janrakshak_photo_after_${ticket.id}`, dataUrl);
+        } catch {}
+        if (onUpdateTicketPhoto) {
+          onUpdateTicketPhoto(ticket.id, dataUrl, 'after');
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleToggleAlerts = () => {
     setAlertsEnabled(!alertsEnabled);
@@ -88,11 +250,11 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
       {/* Top Header Bar */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate('citizen_home_normal')}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs transition-colors cursor-pointer"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_normal'))}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs transition-colors active:scale-95 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Civic Portal</span>
+          <span>Go Back</span>
         </button>
 
         <div className="flex items-center gap-2">
@@ -222,47 +384,58 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
         </div>
       </div>
 
-      {/* Interactive Mini GIS Ward Map Canvas */}
+      {/* Real Interactive Mini GIS Ward Map Canvas */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 shadow-xs">
-        <div className="relative w-full h-44 rounded-xl overflow-hidden bg-slate-950">
-          {/* Technical Vector GIS Grid Background */}
-          <div className="w-full h-full bg-[#0B1120] relative flex items-center justify-center">
-            {/* GIS Grid Mesh */}
-            <div className="absolute inset-0 opacity-25 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:20px_20px]" />
-            <svg className="absolute inset-0 w-full h-full opacity-30" xmlns="http://www.w3.org/2000/svg">
-              <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#38bdf8" strokeWidth="1" strokeDasharray="4 4" />
-              <line x1="50%" y1="0" x2="50%" y2="100%" stroke="#38bdf8" strokeWidth="1" strokeDasharray="4 4" />
-              <circle cx="50%" cy="50%" r="35" fill="none" stroke="#38bdf8" strokeWidth="1" opacity="0.4" />
-              <circle cx="50%" cy="50%" r="70" fill="none" stroke="#38bdf8" strokeWidth="1" strokeDasharray="3 3" opacity="0.25" />
-            </svg>
+        <div className="relative w-full h-48 sm:h-52 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+          {/* Leaflet Real Map Viewport */}
+          <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-            {/* Target Reticle Centered on Ticket Coordinates */}
-            <div className="relative z-10 flex flex-col items-center">
-              <span className="w-4 h-4 rounded-full bg-blue-500/30 animate-ping absolute" />
-              <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-md relative z-10" />
-              <span className="font-mono text-[10px] font-bold text-sky-300 bg-slate-950/85 px-2 py-0.5 rounded mt-1.5 border border-slate-800">
-                {ticket.coordinates.latitude.toFixed(4)}° N, {ticket.coordinates.longitude.toFixed(4)}° E
-              </span>
+          {/* Map Floating Badges & Controls */}
+          <div className="absolute top-2.5 inset-x-2.5 z-[400] flex items-center justify-between pointer-events-none">
+            <span className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border border-slate-700 shadow-sm pointer-events-auto">
+              {ticket.coordinates.latitude.toFixed(4)}° N, {ticket.coordinates.longitude.toFixed(4)}° E
+            </span>
+
+            <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md p-0.5 rounded-lg border border-slate-200 shadow-sm pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => setMiniMapMode('satellite')}
+                className={`px-2 py-0.5 text-[10px] font-bold rounded cursor-pointer transition-all ${
+                  miniMapMode === 'satellite'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🛰️ Satellite
+              </button>
+              <button
+                type="button"
+                onClick={() => setMiniMapMode('streets')}
+                className={`px-2 py-0.5 text-[10px] font-bold rounded cursor-pointer transition-all ${
+                  miniMapMode === 'streets'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                🗺️ Streets
+              </button>
             </div>
           </div>
 
-          {/* Map Overlay & Cluster Perimeter */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex flex-col justify-end p-3.5 pointer-events-none">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-slate-900 text-xs font-semibold shadow-md pointer-events-auto">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                <span>Cluster Perimeter: 40m Active Radius</span>
-              </div>
-
-              <button
-                onClick={() => onNavigate('hazard_navigation_map')}
-                className="bg-white text-blue-700 w-8 h-8 rounded-full flex items-center justify-center shadow-md hover:bg-slate-100 transition-colors cursor-pointer pointer-events-auto"
-                title="Expand Full GIS Hazard Map"
-                aria-label="Expand GIS Map"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
+          <div className="absolute bottom-2.5 inset-x-2.5 z-[400] flex items-center justify-between pointer-events-none">
+            <div className="flex items-center gap-2 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-slate-900 text-xs font-semibold shadow-md pointer-events-auto border border-slate-200">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+              <span>Cluster Perimeter: 40m Active Radius</span>
             </div>
+
+            <button
+              onClick={() => onNavigate('hazard_navigation_map')}
+              className="bg-white text-blue-700 hover:text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shadow-md hover:bg-slate-50 transition-all cursor-pointer pointer-events-auto border border-slate-200 active:scale-95"
+              title="Expand Full GIS Hazard Map"
+              aria-label="Expand GIS Map"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -389,8 +562,29 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
 
       {/* Field Photo Evidence Comparison Card (Real User/Crew Images Only) */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+        {/* Hidden File Inputs for Interactive Photo Proof Uploads */}
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          ref={beforeFileInputRef}
+          onChange={handleBeforePhotoUpload}
+          className="hidden"
+        />
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          ref={afterFileInputRef}
+          onChange={handleAfterPhotoUpload}
+          className="hidden"
+        />
+
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-sm font-bold text-slate-900">Field Photo Evidence</h2>
+          <div className="flex items-center gap-2">
+            <Camera className="w-4 h-4 text-blue-600" />
+            <h2 className="text-sm font-bold text-slate-900">Field Photo Evidence</h2>
+          </div>
           <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">
             Real Photographic Audit
           </span>
@@ -398,12 +592,12 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Left: Before Work Proof */}
-          <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center">
-              {ticket.beforeImageUrl ? (
+          <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-2xs flex flex-col justify-between">
+            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group">
+              {beforePhoto ? (
                 <>
                   <img
-                    src={ticket.beforeImageUrl}
+                    src={beforePhoto}
                     alt="Citizen defect proof"
                     className="w-full h-full object-cover"
                   />
@@ -413,32 +607,62 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
                   <span className="absolute bottom-2 left-2 bg-slate-950/85 text-white font-mono text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
                     {ticket.reportedAt}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => beforeFileInputRef.current?.click()}
+                    className="absolute top-2 right-2 bg-black/80 hover:bg-black text-white font-mono text-[10px] px-2 py-1 rounded flex items-center gap-1 backdrop-blur-xs transition-all cursor-pointer shadow-md active:scale-95"
+                    title="Update or change defect photograph"
+                  >
+                    <RefreshCw className="w-3 h-3 text-amber-400" />
+                    <span>Update</span>
+                  </button>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center text-slate-400 p-4 text-center">
-                  <Camera className="w-8 h-8 mb-1.5 text-slate-500 opacity-60" />
+                <div className="flex flex-col items-center justify-center p-4 text-center w-full h-full bg-[#0B1120]">
+                  <Camera className="w-8 h-8 mb-2 text-slate-500 opacity-60" />
                   <span className="text-xs font-bold text-slate-300">No Photo Submitted</span>
-                  <span className="text-[10px] text-slate-500 font-mono mt-0.5">GPS Geotagged coordinates only</span>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5 mb-2.5 max-w-[210px] leading-snug">
+                    GPS Geotagged coordinates only. Upload real defect photo to expedite crew inspection.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => beforeFileInputRef.current?.click()}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload Defect Photo</span>
+                  </button>
                 </div>
               )}
             </div>
-            <div className="p-3">
-              <span className="text-xs font-bold text-slate-900 block truncate">
-                Citizen Defect Snapshot
-              </span>
-              <span className="text-[11px] text-slate-500 block">
-                {ticket.beforeImageUrl ? 'Verified User Upload' : 'Geospatial GPS Coordinate Record'}
-              </span>
+            <div className="p-3 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-900 block truncate">
+                  Citizen Defect Snapshot
+                </span>
+                <span className="text-[11px] text-slate-500 block">
+                  {beforePhoto ? 'Verified User Upload' : 'Geospatial GPS Coordinate Record'}
+                </span>
+              </div>
+              {!beforePhoto && (
+                <button
+                  type="button"
+                  onClick={() => beforeFileInputRef.current?.click()}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 underline cursor-pointer"
+                >
+                  Attach Photo
+                </button>
+              )}
             </div>
           </div>
 
           {/* Right: In-Progress / After Evidence */}
-          <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center">
-              {ticket.afterImageUrl ? (
+          <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-2xs flex flex-col justify-between">
+            <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden group">
+              {afterPhoto ? (
                 <>
                   <img
-                    src={ticket.afterImageUrl}
+                    src={afterPhoto}
                     alt="Field crew repair proof"
                     className="w-full h-full object-cover"
                   />
@@ -448,22 +672,52 @@ export const PublicTicketStepper: React.FC<PublicTicketStepperProps> = ({ ticket
                   <span className="absolute bottom-2 left-2 bg-slate-950/85 text-white font-mono text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
                     Verified Resolution
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => afterFileInputRef.current?.click()}
+                    className="absolute top-2 right-2 bg-black/80 hover:bg-black text-white font-mono text-[10px] px-2 py-1 rounded flex items-center gap-1 backdrop-blur-xs transition-all cursor-pointer shadow-md active:scale-95"
+                    title="Update repair completion photograph"
+                  >
+                    <RefreshCw className="w-3 h-3 text-amber-400" />
+                    <span>Update</span>
+                  </button>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center text-slate-400 p-4 text-center">
-                  <CheckCircle2 className="w-8 h-8 mb-1.5 text-slate-500 opacity-60" />
+                <div className="flex flex-col items-center justify-center p-4 text-center w-full h-full bg-[#0B1120]">
+                  <CheckCircle2 className="w-8 h-8 mb-2 text-slate-500 opacity-60" />
                   <span className="text-xs font-bold text-slate-300">Pending Repair Completion</span>
-                  <span className="text-[10px] text-slate-500 font-mono mt-0.5">After-photo uploaded upon work finish</span>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5 mb-2.5 max-w-[210px] leading-snug">
+                    After-photo uploaded upon work finish by municipal engineering squad.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => afterFileInputRef.current?.click()}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Attach Repair Proof</span>
+                  </button>
                 </div>
               )}
             </div>
-            <div className="p-3">
-              <span className="text-xs font-bold text-slate-900 block truncate">
-                Field Crew Resolution
-              </span>
-              <span className="text-[11px] text-slate-500 block">
-                {ticket.afterImageUrl ? 'Sealed by GVMC Squad' : 'Crew dispatch in progress'}
-              </span>
+            <div className="p-3 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-900 block truncate">
+                  Field Crew Resolution
+                </span>
+                <span className="text-[11px] text-slate-500 block">
+                  {afterPhoto ? 'Verified Resolution Evidence' : 'Crew dispatch in progress'}
+                </span>
+              </div>
+              {!afterPhoto && (
+                <button
+                  type="button"
+                  onClick={() => afterFileInputRef.current?.click()}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 underline cursor-pointer"
+                >
+                  Attach Proof
+                </button>
+              )}
             </div>
           </div>
         </div>

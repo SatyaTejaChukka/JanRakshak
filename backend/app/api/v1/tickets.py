@@ -27,16 +27,21 @@ router = APIRouter(prefix="/tickets", tags=["Tickets & Civic Governance"])
 async def list_tickets(
     category: Optional[str] = Query(None, description="Filter by category"),
     stage: Optional[str] = Query(None, description="Filter by stage"),
+    ward: Optional[str] = Query(None, description="Filter by municipal ward"),
     search: Optional[str] = Query(None, description="Search keyword in title or location"),
+    sort_by: Optional[str] = Query("newest", description="Sort order: newest, merged_count, severity"),
 ):
-    """List civic work order tickets with multi-field filtering."""
-    tickets = db_store.tickets
+    """List civic work order tickets with multi-field filtering and priority sorting."""
+    tickets = list(db_store.tickets)
 
     if category and category != "All":
         tickets = [t for t in tickets if t["category"] == category]
 
     if stage and stage != "All":
         tickets = [t for t in tickets if t["currentStage"] == stage]
+
+    if ward and ward != "All":
+        tickets = [t for t in tickets if ward.lower() in t["location"].lower()]
 
     if search:
         q = search.lower()
@@ -47,6 +52,12 @@ async def list_tickets(
             or q in t["id"].lower()
             or q in t["location"].lower()
         ]
+
+    if sort_by == "merged_count":
+        tickets.sort(key=lambda t: t.get("mergedCount", 1), reverse=True)
+    elif sort_by == "severity":
+        severity_order = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1}
+        tickets.sort(key=lambda t: severity_order.get(t.get("severity", "Low"), 1), reverse=True)
 
     return tickets
 

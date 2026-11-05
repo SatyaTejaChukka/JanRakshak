@@ -25,12 +25,16 @@ interface CycloneReliefShelterProps {
   shelters: Shelter[];
   onNavigate: (screen: ScreenId) => void;
   onUpdateOccupancy: (shelterId: string, delta: number) => void;
+  onGoBack?: () => void;
+  onSelectShelterForNavigation?: (shelterId: string) => void;
 }
 
 export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
   shelters,
   onNavigate,
   onUpdateOccupancy,
+  onGoBack,
+  onSelectShelterForNavigation,
 }) => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'nearby' | 'medical' | 'power' | 'pets'>('all');
 
@@ -110,7 +114,7 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
               type="button"
               onClick={() => onUpdateOccupancy(shelter.id, -5)}
               disabled={shelter.currentOccupants <= 0}
-              className="rounded border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+              className="rounded border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 cursor-pointer"
               aria-label={`Check out five people at ${shelter.name}`}
             >
               -5 out
@@ -119,10 +123,10 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
               type="button"
               onClick={() => onUpdateOccupancy(shelter.id, 10)}
               disabled={shelter.currentOccupants >= shelter.totalCapacity}
-              className="rounded border border-emerald-200 bg-white px-2 py-1 text-[10px] font-bold text-emerald-800 hover:bg-emerald-50 disabled:opacity-40"
+              className="rounded border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-800 hover:bg-blue-100 disabled:opacity-40 cursor-pointer"
               aria-label={`Check in ten people at ${shelter.name}`}
             >
-              +10 check in
+              +10 in
             </button>
           </div>
         </div>
@@ -131,17 +135,15 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
   };
 
   const renderFacilities = (shelter: Shelter) => (
-    <div className="mt-4 flex flex-wrap gap-1.5">
-      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1.5 text-[11px] font-medium text-slate-700">
-        <Zap className={`h-3.5 w-3.5 ${shelter.generatorStatus === 'Offline' ? 'text-red-600' : 'text-amber-600'}`} />
-        Power: {shelter.generatorStatus}
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">
+        <Droplet className="h-3 w-3 text-blue-700" /> {shelter.waterSupplyStatus} water
       </span>
-      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1.5 text-[11px] font-medium text-slate-700">
-        <Droplet className={`h-3.5 w-3.5 ${shelter.waterSupplyStatus === 'Critical' ? 'text-red-600' : 'text-blue-600'}`} />
-        Water: {shelter.waterSupplyStatus}
+      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">
+        <Zap className="h-3 w-3 text-amber-600" /> {shelter.generatorStatus} generator
       </span>
       {shelter.amenities.map((amenity) => (
-        <span key={amenity} className="rounded bg-slate-100 px-2 py-1.5 text-[11px] font-medium text-slate-700">
+        <span key={amenity} className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
           {amenity}
         </span>
       ))}
@@ -153,9 +155,9 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
       <header className="sticky top-0 z-20 -mx-3 flex h-16 items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-3 shadow-sm backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex min-w-0 items-center gap-2">
           <button
-            onClick={() => onNavigate('citizen_home_disaster')}
+            onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_disaster'))}
             aria-label="Go Back"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-700 transition-colors hover:bg-slate-100"
+            className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 transition-colors flex items-center gap-2 cursor-pointer active:scale-95"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -202,7 +204,7 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
             type="button"
             aria-pressed={activeFilter === filter}
             onClick={() => setActiveFilter(filter)}
-            className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-bold transition-colors ${activeFilter === filter ? 'bg-emerald-800 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100'}`}
+            className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-bold transition-colors cursor-pointer ${activeFilter === filter ? 'bg-emerald-800 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100'}`}
           >
             {label}
           </button>
@@ -249,8 +251,13 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => onNavigate('hazard_navigation_map')}
-              className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded bg-emerald-800 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-900"
+              onClick={() => {
+                if (onSelectShelterForNavigation) {
+                  onSelectShelterForNavigation(recommendedShelter.id);
+                }
+                onNavigate('hazard_navigation_map');
+              }}
+              className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded bg-emerald-800 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-900 cursor-pointer shadow-sm active:scale-95"
             >
               <Compass className="h-5 w-5" /> Navigate safe route
             </button>
@@ -296,13 +303,18 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
                   {shelter.generatorStatus !== 'Offline' && <BatteryCharging className="ml-1 h-3.5 w-3.5 text-amber-700" aria-label="Power backup" />}
                 </div>
                 <div className="flex items-center gap-2">
-                  <a href={`tel:${shelter.contactNumber}`} aria-label={`Call ${shelter.name}`} className="flex h-9 w-9 items-center justify-center rounded bg-slate-100 text-slate-700 hover:bg-slate-200">
+                  <a href={`tel:${shelter.contactNumber}`} aria-label={`Call ${shelter.name}`} className="flex h-9 w-9 items-center justify-center rounded bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">
                     <Phone className="h-4 w-4" />
                   </a>
                   <button
                     type="button"
-                    onClick={() => onNavigate('hazard_navigation_map')}
-                    className="flex items-center gap-1.5 rounded bg-slate-100 px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-200"
+                    onClick={() => {
+                      if (onSelectShelterForNavigation) {
+                        onSelectShelterForNavigation(shelter.id);
+                      }
+                      onNavigate('hazard_navigation_map');
+                    }}
+                    className="flex items-center gap-1.5 rounded bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 cursor-pointer shadow-xs active:scale-95 transition-all"
                   >
                     <Compass className="h-4 w-4" /> Directions
                   </button>
@@ -327,7 +339,7 @@ export const CycloneReliefShelter: React.FC<CycloneReliefShelterProps> = ({
           </div>
           <h2 className="mt-2 text-sm font-bold">Need urgent evacuation assistance?</h2>
           <p className="mx-auto mt-1 max-w-sm text-xs text-slate-300">For urgent cyclone rescue or evacuation support, contact the disaster helpline.</p>
-          <a href="tel:1077" className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800">
+          <a href="tel:1077" className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 cursor-pointer shadow-xs active:scale-95">
             <Phone className="h-4 w-4" /> Call disaster helpline: 1077
           </a>
           <p className="mt-3 text-[10px] text-slate-400">If you are in immediate danger, move to a safer location and contact emergency services.</p>

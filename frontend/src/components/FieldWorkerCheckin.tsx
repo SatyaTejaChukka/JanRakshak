@@ -17,12 +17,14 @@ interface FieldWorkerCheckinProps {
   tickets: Ticket[];
   onNavigate: (screen: ScreenId) => void;
   onUpdateTicketStage: (ticketId: string, stage: Ticket['currentStage']) => void;
+  onGoBack?: () => void;
 }
 
 export const FieldWorkerCheckin: React.FC<FieldWorkerCheckinProps> = ({
   tickets,
   onNavigate,
   onUpdateTicketStage,
+  onGoBack,
 }) => {
   const [selectedTicketId, setSelectedTicketId] = useState<string>('TKT-8902');
   const [isCheckedIn, setIsCheckedIn] = useState<boolean>(true);
@@ -58,12 +60,12 @@ export const FieldWorkerCheckin: React.FC<FieldWorkerCheckinProps> = ({
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate('citizen_home_normal')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors"
-          aria-label="Back to Civic Home"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate('gvmc_admin_dashboard'))}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors active:scale-95 cursor-pointer"
+          aria-label="Back"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Civic Portal</span>
+          <span>Go Back</span>
         </button>
         <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded">
           GPS GEOFENCE: INSIDE 25M WORK ZONE

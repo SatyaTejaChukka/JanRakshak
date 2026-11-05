@@ -21,6 +21,7 @@ import {
 interface VolunteerInterestFormProps {
   onNavigate: (screen: ScreenId) => void;
   onSubmitApplication: (application: VolunteerApplication) => void;
+  onGoBack?: () => void;
 }
 
 const AVAILABLE_SKILLS = [
@@ -51,6 +52,7 @@ const AVAILABLE_EQUIPMENT = [
 export const VolunteerInterestForm: React.FC<VolunteerInterestFormProps> = ({
   onNavigate,
   onSubmitApplication,
+  onGoBack,
 }) => {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -186,11 +188,11 @@ export const VolunteerInterestForm: React.FC<VolunteerInterestFormProps> = ({
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <button
-          onClick={() => onNavigate('citizen_home_disaster')}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg w-fit shadow-xs transition-colors cursor-pointer"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate('citizen_home_disaster'))}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg w-fit shadow-xs transition-colors active:scale-95 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Disaster Emergency Hub</span>
+          <span>Go Back</span>
         </button>
 
         <div className="flex items-center gap-2 text-xs font-mono">

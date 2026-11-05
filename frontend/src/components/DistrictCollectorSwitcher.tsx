@@ -1,33 +1,30 @@
 import React, { useState } from 'react';
 import { ScreenId } from '../types';
 import {
-  Gauge,
   ArrowLeft,
-  ShieldAlert,
   Flame,
   CheckCircle2,
-  AlertTriangle,
-  Lock,
-  Unlock,
   Building2,
-  FileCheck,
   Radio,
+  ArrowRight,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 
 interface DistrictCollectorSwitcherProps {
   isDisasterMode: boolean;
   onToggleDisasterMode: (enabled: boolean) => void;
   onNavigate: (screen: ScreenId) => void;
+  onGoBack?: () => void;
 }
 
 export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps> = ({
   isDisasterMode,
   onToggleDisasterMode,
   onNavigate,
+  onGoBack,
 }) => {
-  const [officerPIN, setOfficerPIN] = useState('8891');
-  const [pinEntered, setPinEntered] = useState('8891');
-  const [isUnlocked, setIsUnlocked] = useState(true);
+  const [transitionNotice, setTransitionNotice] = useState<string | null>(null);
   const [collectorLog, setCollectorLog] = useState([
     {
       timestamp: '08:00 AM Today',
@@ -54,6 +51,19 @@ export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps>
       scope: 'District-wide JanRakshak Grid',
     };
     setCollectorLog([newEntry, ...collectorLog]);
+
+    // Automate immediate switch to Civic or Disaster Hub
+    if (newMode) {
+      setTransitionNotice('⚡ DISASTER MODE ENGAGED: Automatically routing all citizens and operations to the Disaster Hub...');
+      setTimeout(() => {
+        onNavigate('citizen_home_disaster');
+      }, 1000);
+    } else {
+      setTransitionNotice('✅ CIVIC MODE RESUMED: Automatically routing all citizens and operations to the Civic Portal...');
+      setTimeout(() => {
+        onNavigate('citizen_home_normal');
+      }, 1000);
+    }
   };
 
   return (
@@ -61,18 +71,29 @@ export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps>
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal')}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors"
+          onClick={() => (onGoBack ? onGoBack() : onNavigate(isDisasterMode ? 'citizen_home_disaster' : 'citizen_home_normal'))}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 transition-colors active:scale-95 cursor-pointer"
           aria-label="Back"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Main Hub</span>
+          <span>Back to {isDisasterMode ? 'Disaster Hub' : 'Civic Portal'}</span>
         </button>
 
         <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded">
           EXECUTIVE JURISDICTION: VISAKHAPATNAM DISTRICT
         </span>
       </div>
+
+      {/* Automated Transition Notice Toast */}
+      {transitionNotice && (
+        <div className="p-4 rounded-xl bg-blue-600 text-white shadow-lg flex items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2.5 text-xs font-bold font-mono">
+            <Zap className="w-5 h-5 text-yellow-300 animate-spin" />
+            <span>{transitionNotice}</span>
+          </div>
+          <span className="text-[11px] font-mono bg-white/20 px-2 py-0.5 rounded">Redirecting...</span>
+        </div>
+      )}
 
       {/* Main Card */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 space-y-6 shadow-xs">
@@ -90,7 +111,7 @@ export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps>
               District Collector Emergency Mode Switcher
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">
-              Statutory Disaster Management Act 2005 authority switch. Flipping this override changes all citizen client UIs into high-visibility Disaster Mode, activates NDRF dispatch integration, and unlocks priority evacuation routing.
+              Statutory Disaster Management Act 2005 authority switch. Flipping this override changes all citizen client UIs into high-visibility Disaster Mode, activates NDRF dispatch integration, and automatically navigates between the Civic Portal and Disaster Hub.
             </p>
           </div>
         </div>
@@ -117,12 +138,12 @@ export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps>
               </h2>
               <p className="text-xs text-slate-600 max-w-lg">
                 {isDisasterMode
-                  ? 'Citizens see red evacuation banners, shelter occupancies, elder SOS buttons, and hazardous safe-route maps.'
+                  ? 'Citizens see red evacuation banners, elder SOS buttons, 2x2 emergency helplines, and hazardous safe-route maps.'
                   : 'Citizens see routine civic defect reporting (potholes, drains, streetlights) with 50m spatial deduplication.'}
               </p>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => handleModeSwitch(!isDisasterMode)}
@@ -135,17 +156,37 @@ export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps>
                 {isDisasterMode ? (
                   <>
                     <Building2 className="w-4 h-4 text-emerald-400" />
-                    <span>Revert to Normal Civic Mode</span>
+                    <span>Automate Switch to Normal Civic Mode</span>
                   </>
                 ) : (
                   <>
                     <Flame className="w-4 h-4 text-yellow-300" />
-                    <span>Engage Disaster Emergency Mode</span>
+                    <span>Automate Switch to Disaster Mode</span>
                   </>
                 )}
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Quick Hub Navigation Links */}
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <button
+            onClick={() => onNavigate('citizen_home_disaster')}
+            className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl border border-red-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <Flame className="w-4 h-4" />
+            <span>Open Disaster Hub</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => onNavigate('citizen_home_normal')}
+            className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <Building2 className="w-4 h-4" />
+            <span>Open Civic Portal</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* Statutory Directives and Checklist */}
@@ -157,8 +198,8 @@ export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-start gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-slate-900">18 Cyclone Shelters Activated</span>
-                <p className="text-slate-500 text-[11px] mt-0.5">Dry rations for 48 hours and diesel generator fuel certified.</p>
+                <span className="font-bold text-slate-900">Automated Hub Synchronization</span>
+                <p className="text-slate-500 text-[11px] mt-0.5">Switching instantly synchronizes citizen web and mobile interfaces.</p>
               </div>
             </div>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-start gap-2.5">
@@ -199,31 +240,15 @@ export const DistrictCollectorSwitcher: React.FC<DistrictCollectorSwitcherProps>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-900">{log.action}</span>
-                    <span className="text-slate-400">·</span>
-                    <span className="text-slate-500">{log.officer}</span>
                   </div>
-                  <span className="text-[11px] text-slate-400">{log.scope}</span>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    <span>Officer: {log.officer}</span> · <span>Scope: {log.scope}</span>
+                  </div>
                 </div>
-                <span className="font-mono text-[11px] text-slate-500 shrink-0">{log.timestamp}</span>
+                <span className="text-[11px] font-mono text-slate-400 shrink-0">{log.timestamp}</span>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Quick Nav Action */}
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
-          <button
-            onClick={() => onNavigate('ndrf_dispatcher_dashboard')}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg"
-          >
-            Go to NDRF Dispatcher War Room →
-          </button>
-          <button
-            onClick={() => onNavigate('cyclone_shelter_capacity')}
-            className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg"
-          >
-            Review Cyclone Shelters →
-          </button>
         </div>
       </div>
     </div>
