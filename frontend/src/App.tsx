@@ -14,7 +14,9 @@ import {
   VolunteerApplication,
   ActiveVolunteer,
   MunicipalOfficer,
+  UserProfile,
 } from './types';
+import { UserAccountModal } from './components/UserAccountModal';
 import {
   INITIAL_TICKETS,
   INITIAL_ELDER_PROFILE,
@@ -85,6 +87,16 @@ export default function App() {
   const [municipalOfficers, setMunicipalOfficers] = useState<MunicipalOfficer[]>(
     INITIAL_MUNICIPAL_OFFICERS
   );
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>({
+    id: 'USR-88219',
+    fullName: 'Chukka Satya Teja',
+    mobileNumber: '+91 98480 12345',
+    aadhaarNumber: '4921 8842 1092',
+    ward: 'Ward 14 (Madhurawada & Coastal)',
+    isVerified: true,
+    registeredAt: 'Today',
+  });
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
 
   // Synchronize state with backend API on mount
   useEffect(() => {
@@ -291,8 +303,6 @@ export default function App() {
           title: 'MUNICIPAL WORKS OPERATIONS',
           items: [
             { id: 'gvmc_admin_dashboard' as ScreenId, label: 'GVMC Admin Console', icon: Building2, count: `${tickets.length} Orders` },
-            { id: 'spatial_dedup_notice' as ScreenId, label: '50m Dedupe Engine', icon: Layers, count: '18 Clustered' },
-            { id: 'field_worker_checkin' as ScreenId, label: 'Crew Field Check-In', icon: HardHat, count: 'Crew 4' },
             { id: 'public_ticket_stepper' as ScreenId, label: 'Public SLA Stepper', icon: CheckCircle2, count: null },
             { id: 'camera_defect_capture' as ScreenId, label: 'Manual Defect Intake', icon: Camera, count: null },
           ],
@@ -347,10 +357,8 @@ export default function App() {
         title: 'DISASTER & LIFE SAFETY',
         items: [
           { id: 'citizen_home_disaster' as ScreenId, label: 'Disaster Hub', icon: Flame, count: 'RED' },
-          { id: 'volunteer_interest_form' as ScreenId, label: 'Join Volunteer Corps', icon: HeartHandshake, count: 'Open' },
           { id: 'elder_sos_trigger' as ScreenId, label: 'Emergency Elder SOS', icon: AlertOctagon, count: 'URGENT' },
           { id: 'volunteer_proximity' as ScreenId, label: 'Volunteer Radar', icon: Users, count: '<500m' },
-          { id: 'cyclone_shelter_capacity' as ScreenId, label: 'Relief Shelters', icon: LifeBuoy, count: '18 Active' },
           { id: 'elder_profile_setup' as ScreenId, label: 'Vulnerability Registry', icon: User, count: null },
         ],
       },
@@ -377,6 +385,8 @@ export default function App() {
         onSelectRole={handleSelectRole}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        currentUser={currentUser}
+        onOpenAccount={() => setIsAccountModalOpen(true)}
       />
 
       {/* Real-Time Operational Telemetry Strip */}
@@ -653,6 +663,20 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* User Account / Create Account Modal (Requirement 1) */}
+      <UserAccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        currentUser={currentUser}
+        onSaveUser={(user) => {
+          setCurrentUser(user);
+          setIsAccountModalOpen(false);
+        }}
+        onLogout={() => {
+          setCurrentUser(null);
+        }}
+      />
     </div>
   );
 }

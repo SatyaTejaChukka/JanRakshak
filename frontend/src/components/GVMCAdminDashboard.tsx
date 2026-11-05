@@ -128,20 +128,10 @@ export const GVMCAdminDashboard: React.FC<GVMCAdminDashboardProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => onNavigate('spatial_dedup_notice')}
-            className="px-3.5 py-2 text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg shadow-xs flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            <Layers className="w-4 h-4 text-blue-600" />
-            <span>50m Dedupe Engine</span>
-          </button>
-          <button
-            onClick={() => onNavigate('field_worker_checkin')}
-            className="px-3.5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>Crew Field Check-In</span>
-          </button>
+          <div className="px-3.5 py-2 text-xs font-mono font-bold bg-blue-50 border border-blue-200 text-blue-800 rounded-lg shadow-xs flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-blue-600" />
+            <span>GVMC Ward 14 · Zone 2 Active</span>
+          </div>
         </div>
       </div>
 

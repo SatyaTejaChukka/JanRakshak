@@ -1,10 +1,9 @@
-import React from 'react';
-import { ScreenId, UserRole } from '../types';
+import React, { useState } from 'react';
+import { ScreenId, UserRole, UserProfile } from '../types';
 import {
   ShieldAlert,
   Flame,
   Radio,
-  HardHat,
   Compass,
   Home,
   Menu,
@@ -12,14 +11,10 @@ import {
   PanelLeftClose,
   PanelLeft,
   LifeBuoy,
-  MapPin,
-  Bell,
-  Search,
   User,
   Building2,
   Users,
-  Layers,
-  HeartHandshake,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -30,6 +25,8 @@ interface NavbarProps {
   onSelectRole: (role: UserRole) => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  currentUser?: UserProfile | null;
+  onOpenAccount?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -40,8 +37,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectRole,
   isSidebarOpen = true,
   onToggleSidebar,
+  currentUser,
+  onOpenAccount,
 }) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
@@ -97,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Center Zone: Role-Specific Desktop Quick Navigation */}
-          <nav className="hidden lg:flex items-center gap-4 text-xs font-semibold text-slate-600">
+          <nav className="hidden lg:flex items-center gap-5 text-xs font-semibold text-slate-600">
             {currentRole === 'CITIZEN' && (
               <>
                 <button
@@ -121,24 +120,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Disaster Hub
                 </button>
                 <button
-                  onClick={() => onNavigate('volunteer_interest_form')}
+                  onClick={() => onNavigate('hazard_navigation_map')}
                   className={`hover:text-blue-600 transition-colors cursor-pointer ${
-                    currentScreen === 'volunteer_interest_form'
+                    currentScreen === 'hazard_navigation_map'
                       ? 'text-blue-600 font-bold underline underline-offset-4'
                       : ''
                   }`}
                 >
-                  Join Volunteers
-                </button>
-                <button
-                  onClick={() => onNavigate('cyclone_shelter_capacity')}
-                  className={`hover:text-slate-900 transition-colors cursor-pointer ${
-                    currentScreen === 'cyclone_shelter_capacity'
-                      ? 'text-slate-900 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  Shelters
+                  Safe Evacuation Route
                 </button>
               </>
             )}
@@ -154,26 +143,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }`}
                 >
                   GVMC Works Console
-                </button>
-                <button
-                  onClick={() => onNavigate('spatial_dedup_notice')}
-                  className={`hover:text-blue-600 transition-colors cursor-pointer ${
-                    currentScreen === 'spatial_dedup_notice'
-                      ? 'text-blue-600 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  50m Dedupe Radar
-                </button>
-                <button
-                  onClick={() => onNavigate('field_worker_checkin')}
-                  className={`hover:text-slate-900 transition-colors cursor-pointer ${
-                    currentScreen === 'field_worker_checkin'
-                      ? 'text-slate-900 font-bold underline underline-offset-4'
-                      : ''
-                  }`}
-                >
-                  Crew Field Check-In
                 </button>
                 <button
                   onClick={() => onNavigate('hazard_navigation_map')}
@@ -234,8 +203,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </nav>
 
-          {/* Right Zone: RBAC Role Selector + Mode Switcher + Mobile Trigger */}
+          {/* Right Zone: Account Profile + Role Selector + Mode Switcher */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* User Account Button (Requirement 1) */}
+            {onOpenAccount && (
+              <button
+                type="button"
+                onClick={onOpenAccount}
+                className="px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title={currentUser ? `Logged in: ${currentUser.fullName}` : 'Open / Create Citizen Account'}
+              >
+                <User className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="hidden md:inline font-bold">
+                  {currentUser ? currentUser.fullName.split(' ')[0] : 'Open Account'}
+                </span>
+                {currentUser && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Aadhaar Verified" />
+                )}
+              </button>
+            )}
+
             {/* RBAC Role Selector Pill */}
             <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold">
               <button
@@ -319,6 +306,29 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Mobile dropdown drawer */}
         {isMobileMenuOpen && (
           <div className="lg:hidden py-3 border-t border-slate-100 flex flex-col gap-2.5">
+            {onOpenAccount && (
+              <div className="px-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenAccount();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full py-2 px-3 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-blue-600" />
+                    <span>{currentUser ? `Account: ${currentUser.fullName}` : 'Open Citizen Account'}</span>
+                  </div>
+                  {currentUser && (
+                    <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded font-mono">
+                      Verified
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between px-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
               <span>Switch User Role</span>
               <span className="font-mono text-slate-500">Active: {currentRole}</span>
@@ -361,7 +371,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 px-2 pt-2 border-t border-slate-100">
-              JanRakshak Navigation
+              Navigation
             </div>
 
             <div className="grid grid-cols-2 gap-1.5">
@@ -376,15 +386,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
               <button
                 onClick={() => {
-                  onNavigate('gvmc_admin_dashboard');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2"
-              >
-                <Building2 className="w-3.5 h-3.5 text-blue-700" /> GVMC Admin
-              </button>
-              <button
-                onClick={() => {
                   onNavigate('citizen_home_disaster');
                   setIsMobileMenuOpen(false);
                 }}
@@ -394,30 +395,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
               <button
                 onClick={() => {
-                  onNavigate('volunteer_interest_form');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 text-blue-700 font-semibold"
-              >
-                <HeartHandshake className="w-3.5 h-3.5 text-blue-600" /> Join Volunteers
-              </button>
-              <button
-                onClick={() => {
-                  onNavigate('ndrf_volunteer_hub');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 text-amber-700 font-semibold"
-              >
-                <Users className="w-3.5 h-3.5 text-amber-600" /> NDRF Volunteers
-              </button>
-              <button
-                onClick={() => {
-                  onNavigate('ndrf_dispatcher_dashboard');
+                  onNavigate('hazard_navigation_map');
                   setIsMobileMenuOpen(false);
                 }}
                 className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2"
               >
-                <Radio className="w-3.5 h-3.5 text-amber-600" /> NDRF War Room
+                <Compass className="w-3.5 h-3.5 text-emerald-600" /> Evacuation Route
               </button>
               <button
                 onClick={() => {
@@ -427,15 +410,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2 text-red-700 font-bold"
               >
                 <ShieldAlert className="w-3.5 h-3.5 text-red-600" /> Elder SOS
-              </button>
-              <button
-                onClick={() => {
-                  onNavigate('cyclone_shelter_capacity');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-left px-3 py-2 text-xs rounded-lg hover:bg-slate-100 flex items-center gap-2"
-              >
-                <LifeBuoy className="w-3.5 h-3.5 text-blue-600" /> Relief Shelters
               </button>
             </div>
           </div>

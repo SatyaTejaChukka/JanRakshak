@@ -16,7 +16,18 @@ export type ScreenId =
   | 'cyclone_shelter_capacity'
   | 'gvmc_admin_dashboard'
   | 'volunteer_interest_form'
-  | 'ndrf_volunteer_hub';
+  | 'ndrf_volunteer_hub'
+  | 'user_account';
+
+export interface UserProfile {
+  id: string;
+  fullName: string;
+  mobileNumber: string;
+  aadhaarNumber: string;
+  ward: string;
+  isVerified: boolean;
+  registeredAt: string;
+}
 
 export interface Ticket {
   id: string;

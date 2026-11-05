@@ -1,28 +1,140 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScreenId } from '../types';
 import {
   AlertOctagon,
-  LifeBuoy,
   Users,
   Compass,
   PhoneCall,
-  BellRing,
   ArrowRight,
   ShieldAlert,
-  Wind,
-  Waves,
-  BatteryCharging,
-  Flame,
   ArrowLeft,
   Navigation,
-  HeartHandshake,
+  PhoneForwarded,
+  X,
+  PhoneOff,
+  Radio,
+  LifeBuoy,
+  Building2,
+  Ambulance,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface CitizenHomeDisasterProps {
   onNavigate: (screen: ScreenId) => void;
 }
 
+interface ActiveCallState {
+  title: string;
+  phone: string;
+  department: string;
+  operator: string;
+  status: 'DIALING' | 'CONNECTED';
+  durationSeconds: number;
+}
+
 export const CitizenHomeDisaster: React.FC<CitizenHomeDisasterProps> = ({ onNavigate }) => {
+  // State for interactive in-app calling simulation
+  const [activeCall, setActiveCall] = useState<ActiveCallState | null>(null);
+
+  // 4 Emergency Disaster Helplines in 2 rows & 2 columns
+  const disasterHelplines = [
+    {
+      id: 'ndrf',
+      name: 'NDRF Disaster Rescue Command',
+      phone: '1078',
+      displayNumber: '1078 (Toll-Free) / 0891-2551078',
+      department: '10th Battalion Motorized Boat & Tree Cutter Control',
+      badge: 'URGENT RESCUE',
+      badgeColor: 'bg-red-600 text-white',
+      operator: 'Commandant R. S. Pathak (10th Bn NDRF)',
+      icon: ShieldAlert,
+    },
+    {
+      id: 'marine_police',
+      name: 'Coastal Marine Police & Coast Guard',
+      phone: '1093',
+      displayNumber: '1093 / 0891-2561093',
+      department: 'Coastal Tidal Surge, Fishermen Evacuation & Harbor Defense',
+      badge: 'COASTAL PATROL',
+      badgeColor: 'bg-blue-600 text-white',
+      operator: 'DSP Coastal Security Wing (Visakhapatnam)',
+      icon: Radio,
+    },
+    {
+      id: 'ambulance',
+      name: 'Medical Emergency & Trauma (108)',
+      phone: '108',
+      displayNumber: '108 (24x7 Emergency)',
+      department: 'ICU Ambulances, Oxygen Supply & Flood Casualty Triage',
+      badge: 'PARAMEDIC',
+      badgeColor: 'bg-emerald-600 text-white',
+      operator: 'Dr. V. Rao (King George Hospital Disaster Cell)',
+      icon: Ambulance,
+    },
+    {
+      id: 'gvmc_cell',
+      name: 'GVMC Disaster Operations War Room',
+      phone: '18004250001',
+      displayNumber: '1800 425 0001 (Toll-Free)',
+      department: 'Electrical Grid Isolation, Tree Clearance & Dewatering Pumps',
+      badge: 'CIVIC WAR ROOM',
+      badgeColor: 'bg-amber-600 text-white',
+      operator: 'Chief Engineer (GVMC Zone 2 Disaster Wing)',
+      icon: Building2,
+    },
+  ];
+
+  // Automate direct call when helpline is clicked
+  const handleInitiateDirectCall = (helpline: (typeof disasterHelplines)[0]) => {
+    // 1. Direct native phone call automation for mobile dialers
+    try {
+      window.location.href = `tel:${helpline.phone}`;
+    } catch {
+      // Ignore if browser prevents direct tel scheme
+    }
+
+    // 2. Open automated in-app emergency calling console
+    setActiveCall({
+      title: helpline.name,
+      phone: helpline.displayNumber,
+      department: helpline.department,
+      operator: helpline.operator,
+      status: 'DIALING',
+      durationSeconds: 0,
+    });
+  };
+
+  // Manage in-call timer & auto-connect simulation
+  useEffect(() => {
+    let connectTimeout: NodeJS.Timeout;
+    let durationInterval: NodeJS.Timeout;
+
+    if (activeCall) {
+      if (activeCall.status === 'DIALING') {
+        connectTimeout = setTimeout(() => {
+          setActiveCall((prev) => (prev ? { ...prev, status: 'CONNECTED' } : null));
+        }, 1800);
+      } else if (activeCall.status === 'CONNECTED') {
+        durationInterval = setInterval(() => {
+          setActiveCall((prev) =>
+            prev ? { ...prev, durationSeconds: prev.durationSeconds + 1 } : null
+          );
+        }, 1000);
+      }
+    }
+
+    return () => {
+      clearTimeout(connectTimeout);
+      clearInterval(durationInterval);
+    };
+  }, [activeCall?.status]);
+
+  const formatCallDuration = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Red Alert Headline Ribbon */}
@@ -54,7 +166,7 @@ export const CitizenHomeDisaster: React.FC<CitizenHomeDisasterProps> = ({ onNavi
             </button>
             <button
               onClick={() => onNavigate('citizen_home_normal')}
-              className="px-4 py-3 bg-red-800 hover:bg-red-900 text-white font-semibold text-xs rounded-xl border border-red-600 transition-colors flex items-center justify-center gap-2"
+              className="px-4 py-3 bg-red-800 hover:bg-red-900 text-white font-semibold text-xs rounded-xl border border-red-600 transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Return to Normal Civic</span>
@@ -77,163 +189,219 @@ export const CitizenHomeDisaster: React.FC<CitizenHomeDisasterProps> = ({ onNavi
             <span className="font-mono font-bold text-base text-white">182 mm/6hr</span>
           </div>
           <div>
-            <span className="text-red-200 block text-[11px]">Shelter Occupancy</span>
-            <span className="font-mono font-bold text-base text-white">2,160 / 3,450 (62%)</span>
+            <span className="text-red-200 block text-[11px]">Active Responders</span>
+            <span className="font-mono font-bold text-base text-white">42 Verified in Ward 14</span>
           </div>
         </div>
       </div>
 
-      {/* Citizen Volunteer Enrolment Callout */}
-      <div className="bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
-            <HeartHandshake className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded uppercase">
-                CIVILIAN MOBILIZATION ACTIVE
+      {/* Primary Emergency Action Cards (Shelters & NDRF War Room removed per citizen requirements) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Dynamic Hazard Navigation Map with Live Location */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:border-blue-400 transition-all flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700">
+                <Compass className="w-6 h-6 text-blue-600" />
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 uppercase">
+                Live GPS Routing Active
               </span>
-              <span className="text-xs text-slate-400">Join the Coastal Rescue Network</span>
-            </div>
-            <h3 className="text-base font-bold text-white mt-0.5">
-              Have 4x4 vehicles, boats, medical skills, or chainsaws?
-            </h3>
-            <p className="text-xs text-slate-300 max-w-xl">
-              Register as a verified JanRakshak Community Volunteer. NDRF 10th Battalion coordinates and deploys local responders to high-risk zones.
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => onNavigate('volunteer_interest_form')}
-          className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-        >
-          <HeartHandshake className="w-4 h-4" />
-          <span>Apply as Volunteer</span>
-        </button>
-      </div>
-
-      {/* Emergency Action Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Shelter Capacity Card */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs hover:border-blue-400 transition-all flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700">
-              <LifeBuoy className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-base">Cyclone Relief Shelters</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Real-time occupancy, generator fuel status, clean water supplies, and medical staff presence.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate('cyclone_shelter_capacity')}
-            className="mt-4 w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <span>View 18 Shelters</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Dynamic Hazard Navigation Map */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs hover:border-blue-400 transition-all flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700">
-              <Compass className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-900 text-base">Safe Evacuation Route</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Dynamic routing avoiding waterlogged roads, collapsed bridges, and snapped electrical wires.
+              <h3 className="font-extrabold text-slate-900 text-lg">Safe Evacuation Route (Live Location)</h3>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                Dynamic turn-by-turn path from your current live GPS position to the nearest elevated safety shelter, automatically calculating detours around deep waterlogging, fallen trees, and live 11kV snapped cables.
               </p>
             </div>
           </div>
           <button
             onClick={() => onNavigate('hazard_navigation_map')}
-            className="mt-4 w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="mt-6 w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
           >
-            <span>Navigate Safe Route</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <Navigation className="w-4 h-4" />
+            <span>Launch Live Evacuation Route Map</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
         {/* Community Volunteer Proximity Rescue */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs hover:border-emerald-400 transition-all flex flex-col justify-between">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:border-emerald-400 transition-all flex flex-col justify-between">
           <div className="space-y-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
-              <Users className="w-5 h-5" />
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+                <Users className="w-6 h-6 text-emerald-600" />
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
+                &lt; 500m Proximity Radar
+              </span>
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-base">Volunteer Proximity Team</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                42 verified community responders within 400m radius ready with stretchers, 4x4 vehicles & dry rations.
+              <h3 className="font-extrabold text-slate-900 text-lg">Volunteer Proximity Team</h3>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                42 verified local community first responders within 400m of your GPS coordinates, equipped with stretchers, high-clearance 4x4 vehicles, and first aid kits ready to reach stranded residents.
               </p>
             </div>
           </div>
           <button
             onClick={() => onNavigate('volunteer_proximity')}
-            className="mt-4 w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="mt-6 w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
           >
-            <span>Open Rescue Radar</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <Users className="w-4 h-4" />
+            <span>Open Volunteer Proximity Radar</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
+      </div>
 
-        {/* NDRF War Room Dispatcher */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs hover:border-amber-400 transition-all flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700">
-              <ShieldAlert className="w-5 h-5" />
+      {/* Emergency Disaster Helplines in 2 Rows & 2 Columns with Direct Call Automation */}
+      <div className="bg-slate-900 text-white rounded-2xl p-6 sm:p-7 border border-slate-800 shadow-md space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-red-600 rounded-xl text-white">
+              <PhoneCall className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-base">NDRF War Room Command</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                10th Battalion NDRF + SDRF emergency motorized inflatable boats and rescue helicopter units.
-              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold uppercase bg-red-500/20 text-red-400 px-2 py-0.5 rounded">
+                  24x7 TOLL-FREE DIRECT DIAL
+                </span>
+                <span className="text-xs text-slate-400">Click Any Box to Automate Direct Call</span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-extrabold text-white mt-0.5">
+                Emergency Disaster Helpline Numbers
+              </h2>
             </div>
           </div>
-          <button
-            onClick={() => onNavigate('ndrf_dispatcher_dashboard')}
-            className="mt-4 w-full py-2.5 px-3 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <span>War Room Console</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
 
-      {/* Emergency Control Center Contact Hotline Strip */}
-      <div className="bg-slate-900 text-slate-100 rounded-xl p-5 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-red-600 rounded-lg shrink-0">
-            <PhoneCall className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h4 className="font-bold text-sm text-white">Emergency Disaster Helplines (Toll-Free 24x7)</h4>
-            <p className="text-xs text-slate-400">
-              NDRF Control Room: 1078 · Coastal Marine Police: 1093 · Medical Ambulance: 108 · GVMC Disaster Cell: 1800 425 0001
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
           <button
             onClick={() => onNavigate('district_collector_switcher')}
-            className="px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition-colors"
+            className="px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition-colors w-fit cursor-pointer flex items-center gap-1.5"
           >
-            District Collector Override
-          </button>
-          <button
-            onClick={() => onNavigate('field_worker_checkin')}
-            className="px-3.5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            Field Worker Check-In
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>District Collector Override</span>
           </button>
         </div>
+
+        {/* 2 Rows and 2 Columns Helpline Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {disasterHelplines.map((helpline) => {
+            const Icon = helpline.icon;
+            return (
+              <div
+                key={helpline.id}
+                onClick={() => handleInitiateDirectCall(helpline)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleInitiateDirectCall(helpline)}
+                className="p-5 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700 hover:border-red-500 transition-all cursor-pointer group flex flex-col justify-between shadow-xs"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase ${helpline.badgeColor}`}>
+                      {helpline.badge}
+                    </span>
+                    <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-mono font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      <span>Line Open</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 bg-slate-700/80 group-hover:bg-red-600 group-hover:text-white rounded-lg transition-colors shrink-0 text-slate-300">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-base group-hover:text-red-400 transition-colors">
+                        {helpline.name}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                        {helpline.department}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-700/80 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-white font-mono font-bold text-base">
+                    <PhoneForwarded className="w-4 h-4 text-red-400 group-hover:scale-110 transition-transform" />
+                    <span>{helpline.displayNumber}</span>
+                  </div>
+
+                  <span className="px-3 py-1 bg-red-600 group-hover:bg-red-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-xs">
+                    <span>Direct Call</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Automated In-App Direct Calling Simulation Modal */}
+      {activeCall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-800 text-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative text-center space-y-5">
+            <button
+              onClick={() => setActiveCall(null)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Calling Animation Indicator */}
+            <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+              {activeCall.status === 'DIALING' ? (
+                <>
+                  <div className="absolute inset-0 rounded-full bg-red-600/30 animate-ping" />
+                  <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center text-white shadow-lg">
+                    <PhoneCall className="w-8 h-8 animate-bounce" />
+                  </div>
+                </>
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-lg">
+                  <PhoneCall className="w-8 h-8" />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                {activeCall.status === 'DIALING' ? 'Dialing Control Room...' : 'Connected • Line Encrypted'}
+              </span>
+              <h3 className="text-xl font-extrabold text-white mt-2">{activeCall.title}</h3>
+              <p className="text-sm font-mono text-emerald-400 mt-1 font-bold">{activeCall.phone}</p>
+            </div>
+
+            <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/60 text-xs text-slate-300 text-left space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Duty Officer:</span>
+                <span className="font-semibold text-white">{activeCall.operator}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Call Duration:</span>
+                <span className="font-mono font-bold text-white">
+                  {formatCallDuration(activeCall.durationSeconds)}
+                </span>
+              </div>
+            </div>
+
+            {/* End Call Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setActiveCall(null)}
+                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+              >
+                <PhoneOff className="w-4 h-4" />
+                <span>Disconnect Call</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
