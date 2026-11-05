@@ -1,0 +1,29 @@
+{
+  "GVMC-ENG-402": {
+    "id": "GVMC-ENG-402",
+    "name": "Er. Ramesh Naidu",
+    "department": "GVMC_ADMIN",
+    "email": "ramesh.naidu@gvmc.gov.in",
+    "designation": "GVMC Superintending Engineer (Works)",
+    "pin": "1234",
+    "registeredAt": "Pre-authorized Officer"
+  },
+  "NDRF-CMD-10": {
+    "id": "NDRF-CMD-10",
+    "name": "Col. Vikram Singh",
+    "department": "NDRF_ADMIN",
+    "email": "vikram.singh@ndrf.gov.in",
+    "designation": "10th Battalion Commander, NDRF Coastal Andhra",
+    "pin": "1234",
+    "registeredAt": "Pre-authorized Officer"
+  },
+  "GVMC-ADM-999": {
+    "id": "GVMC-ADM-999",
+    "name": "Dr. Satya Teja Chukka",
+    "department": "GVMC_ADMIN",
+    "email": "satya.teja@gvmc.gov.in",
+    "designation": "Superintending Engineer & Zonal Administrator",
+    "pin": "8899",
+    "registeredAt": "Newly Registered Officer"
+  }
+}

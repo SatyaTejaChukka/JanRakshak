@@ -40,3 +40,27 @@ class AadhaarVerifyResponse(BaseModel):
     citizen: Dict[str, Any] = Field(..., description="Verified citizen profile record")
     message: str = Field(..., description="Informational status message")
 
+
+class OfficialRegisterRequest(BaseModel):
+    name: str = Field(..., min_length=2, description="Officer legal / badge full name")
+    department: str = Field(..., description="GVMC_ADMIN or NDRF_ADMIN")
+    badge_id: str = Field(..., min_length=3, description="Officer badge ID or employee service code")
+    email: str = Field(..., description="Departmental email address")
+    designation: Optional[str] = Field("Official Administrator", description="Official rank / role title")
+    pin: str = Field(..., min_length=4, description="Clearance security PIN or password")
+
+
+class OfficialLoginRequest(BaseModel):
+    department: str = Field(..., description="GVMC_ADMIN or NDRF_ADMIN")
+    identifier: str = Field(..., description="Email or Badge ID")
+    pin: str = Field(..., min_length=4, description="Clearance PIN")
+
+
+class OfficialAuthResponse(BaseModel):
+    success: bool
+    role: str
+    officer: Dict[str, Any]
+    token: str
+    message: str
+
+

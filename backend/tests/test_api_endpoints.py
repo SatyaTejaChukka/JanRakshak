@@ -260,3 +260,53 @@ def test_citizen_registration_and_login_by_mobile_persistence():
     assert logged_in_citizen["aadhaarNumber"] == "XXXX-XXXX-5544"
     assert logged_in_citizen["ward"] == test_ward
 
+
+def test_official_registration_and_login():
+    """Verify that registering a new official administrator preserves their exact name."""
+    test_name = "Dr. Satya Teja Chukka"
+    test_badge = "GVMC-ADM-999"
+    test_email = "satya.teja@gvmc.gov.in"
+    test_pin = "8899"
+
+    # 1. Register new official
+    reg_res = client.post(
+        "/api/v1/auth/official/register",
+        json={
+            "name": test_name,
+            "department": "GVMC_ADMIN",
+            "badge_id": test_badge,
+            "email": test_email,
+            "designation": "Superintending Engineer & Zonal Administrator",
+            "pin": test_pin,
+        },
+    )
+    assert reg_res.status_code == 200
+    reg_data = reg_res.json()
+    assert reg_data["success"] is True
+    assert reg_data["officer"]["name"] == test_name
+    assert reg_data["officer"]["id"] == test_badge
+
+    # 2. Lookup registered official
+    lookup_res = client.get(f"/api/v1/auth/official/lookup/{test_badge}")
+    assert lookup_res.status_code == 200
+    lookup_data = lookup_res.json()
+    assert lookup_data["registered"] is True
+    assert lookup_data["officer"]["name"] == test_name
+
+    # 3. Login with registered badge ID and PIN
+    login_res = client.post(
+        "/api/v1/auth/official/login",
+        json={
+            "department": "GVMC_ADMIN",
+            "identifier": test_badge,
+            "pin": test_pin,
+        },
+    )
+    assert login_res.status_code == 200
+    login_data = login_res.json()
+    assert login_data["success"] is True
+    # CRITICAL: Must be Dr. Satya Teja Chukka, NOT Ramesh Naidu!
+    assert login_data["officer"]["name"] == test_name
+    assert login_data["officer"]["id"] == test_badge
+
+

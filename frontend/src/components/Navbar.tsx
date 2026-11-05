@@ -31,6 +31,12 @@ interface NavbarProps {
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   currentUser?: UserProfile | null;
+  officialSession?: {
+    role: UserRole;
+    name: string;
+    id: string;
+    designation: string;
+  } | null;
   onOpenAccount?: () => void;
   onLogout?: () => void;
 }
@@ -43,9 +49,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   isSidebarOpen = true,
   onToggleSidebar,
   currentUser,
+  officialSession,
   onOpenAccount,
   onLogout,
 }) => {
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -289,31 +297,31 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               /* Authorized Official Personnel Terminal Header Zone */
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-bold font-mono border border-slate-800">
+                <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-lg bg-slate-900 text-white text-xs font-mono border border-slate-800 shadow-2xs">
                   {currentRole === 'GVMC_ADMIN' ? (
-                    <>
-                      <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                      <span className="hidden sm:inline">GVMC WORKS ADMIN</span>
-                      <span className="sm:hidden">GVMC</span>
-                    </>
+                    <Building2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                   ) : (
-                    <>
-                      <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-                      <span className="hidden sm:inline">NDRF 10TH BN COMMAND</span>
-                      <span className="sm:hidden">NDRF</span>
-                    </>
+                    <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   )}
+                  <div className="flex flex-col text-left leading-tight">
+                    <span className="font-bold text-white max-w-[120px] sm:max-w-[170px] truncate" title={officialSession?.name}>
+                      {officialSession?.name || (currentRole === 'GVMC_ADMIN' ? 'GVMC Officer' : 'NDRF Commander')}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+                      {officialSession?.id || (currentRole === 'GVMC_ADMIN' ? 'GVMC WORKS' : 'NDRF 10TH BN')}
+                    </span>
+                  </div>
                 </div>
 
                 {onLogout && (
                   <button
                     type="button"
                     onClick={onLogout}
-                    className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+                    className="px-2.5 py-1.5 bg-red-600/90 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs"
                     title="Exit Government Officer Terminal"
                   >
                     <LogOut className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Exit Terminal</span>
+                    <span className="hidden sm:inline">Exit</span>
                   </button>
                 )}
               </div>
@@ -477,6 +485,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <AlertOctagon className="w-3.5 h-3.5 text-red-600" /> Elder SOS
                 </button>
+              </div>
+            )}
+
+            {currentRole !== 'CITIZEN' && officialSession && (
+              <div className="p-3 mb-2 rounded-xl bg-slate-900 border border-slate-800 text-white flex items-center justify-between">
+                <div className="min-w-0">
+                  <div className="font-bold text-xs text-white truncate">{officialSession.name}</div>
+                  <div className="text-[10px] text-slate-400 font-mono truncate">{officialSession.designation} ({officialSession.id})</div>
+                </div>
+                <span className="text-[10px] font-mono bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded shrink-0">
+                  {officialSession.role === 'GVMC_ADMIN' ? 'GVMC' : 'NDRF'}
+                </span>
               </div>
             )}
 

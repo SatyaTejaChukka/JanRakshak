@@ -20,6 +20,11 @@ import {
 interface NDRFDispatcherDashboardProps {
   tickets: Ticket[];
   onNavigate: (screen: ScreenId) => void;
+  officerSession?: {
+    name: string;
+    id: string;
+    designation: string;
+  } | null;
 }
 
 interface DispatchUnit {
@@ -34,7 +39,9 @@ interface DispatchUnit {
 export const NDRFDispatcherDashboard: React.FC<NDRFDispatcherDashboardProps> = ({
   tickets,
   onNavigate,
+  officerSession,
 }) => {
+
   const [units, setUnits] = useState<DispatchUnit[]>([
     {
       id: 'UNIT-B01',
@@ -121,13 +128,15 @@ export const NDRFDispatcherDashboard: React.FC<NDRFDispatcherDashboardProps> = (
       <div className="bg-slate-950 text-white rounded-2xl p-6 border border-slate-800 shadow-md">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-mono">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
               <span className="text-red-400 font-bold uppercase">
                 NATIONAL DISASTER RESPONSE FORCE · 10TH BATTALION COMMAND
               </span>
               <span className="text-slate-500">|</span>
-              <span className="text-slate-400">STATE EOC LINK ACTIVE</span>
+              <span className="text-amber-300 font-bold">
+                COMMANDER: {officerSession?.name || 'Col. Vikram Singh'} ({officerSession?.designation || officerSession?.id || 'NDRF-CMD-10'})
+              </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               War Room Emergency Dispatcher Dashboard

@@ -752,6 +752,7 @@ export default function App() {
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         currentUser={currentUser}
+        officialSession={officialSession}
         onOpenAccount={() => setIsAccountModalOpen(true)}
         onLogout={currentRole === 'CITIZEN' ? handleCitizenLogout : handleOfficialLogout}
       />
@@ -987,6 +988,7 @@ export default function App() {
               onAssignOfficer={handleAssignOfficerToTicket}
               onApproveResolution={handleApproveTicketResolution}
               onRejectResolution={handleRejectTicketResolution}
+              officerSession={officialSession}
             />
           )}
 
@@ -1053,7 +1055,11 @@ export default function App() {
           )}
 
           {currentScreen === 'ndrf_dispatcher_dashboard' && (
-            <NDRFDispatcherDashboard tickets={tickets} onNavigate={handleNavigate} />
+            <NDRFDispatcherDashboard
+              tickets={tickets}
+              onNavigate={handleNavigate}
+              officerSession={officialSession}
+            />
           )}
 
           {currentScreen === 'field_worker_checkin' && (

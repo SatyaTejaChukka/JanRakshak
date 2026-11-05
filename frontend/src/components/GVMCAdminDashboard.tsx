@@ -30,6 +30,11 @@ interface GVMCAdminDashboardProps {
   onAssignOfficer: (ticketId: string, officer: MunicipalOfficer) => void;
   onApproveResolution: (ticketId: string) => void;
   onRejectResolution: (ticketId: string, reason: string) => void;
+  officerSession?: {
+    name: string;
+    id: string;
+    designation: string;
+  } | null;
 }
 
 export const GVMCAdminDashboard: React.FC<GVMCAdminDashboardProps> = ({
@@ -39,7 +44,9 @@ export const GVMCAdminDashboard: React.FC<GVMCAdminDashboardProps> = ({
   onAssignOfficer,
   onApproveResolution,
   onRejectResolution,
+  officerSession,
 }) => {
+
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStage, setSelectedStage] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,11 +120,16 @@ export const GVMCAdminDashboard: React.FC<GVMCAdminDashboardProps> = ({
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-500 mb-1">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-500 mb-1">
             <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold uppercase">
               GVMC Municipal Console
             </span>
             <span>Zone 2 Engineering & Works Department</span>
+            {officerSession?.name && (
+              <span className="text-slate-700 font-medium">
+                · Superintending Officer: <strong className="text-blue-700">{officerSession.name}</strong> ({officerSession.designation || officerSession.id})
+              </span>
+            )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Municipal Works & SLA Command Dashboard
