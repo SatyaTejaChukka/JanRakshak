@@ -50,7 +50,6 @@ export interface Ticket {
   targetSlaHours?: number;
   beforeImageUrl?: string;
   afterImageUrl?: string;
-  targetSlaHours?: number;
 }
 
 export interface EmergencyBroadcast {
