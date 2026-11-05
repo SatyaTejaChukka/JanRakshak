@@ -26,6 +26,8 @@ class TicketCreate(BaseModel):
     coordinates: Coordinates
     citizenName: str = Field(..., json_schema_extra={"example": "Chukka Satya Teja"})
     citizenPhone: str = Field(..., json_schema_extra={"example": "+91 98480 12345"})
+    userId: Optional[str] = None
+    citizenAadhaar: Optional[str] = None
     severity: str = Field(default="Medium", json_schema_extra={"example": "Critical"})
     beforeImageUrl: Optional[str] = None
 
@@ -68,6 +70,9 @@ class TicketResponse(BaseModel):
     currentStage: str
     citizenName: str
     citizenPhone: str
+    userId: Optional[str] = None
+    citizenAadhaar: Optional[str] = None
+    clusterParentId: Optional[str] = None
     mergedCount: int
     severity: str
     assignedCrew: Optional[AssignedCrew] = None
