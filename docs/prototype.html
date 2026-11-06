@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JanRakshak — Interactive Prototype & Platform Explainer</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .animate-pulse-slow {
+      animation: pulse-ring 2.5s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen p-4 md:p-8">
+
+  <!-- Header Banner -->
+  <header class="max-w-6xl mx-auto mb-8 text-center">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-3">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+      Interactive System Prototype & Architectural Walkthrough
+    </div>
+    <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+      JanRakshak (జనరక్షక్)
+    </h1>
+    <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto mt-2">
+      <strong>Civic Care on Normal Days · Life-Safety Protection in Disasters.</strong><br>
+      A unified platform engineered for coastal smart cities (GVMC Visakhapatnam, APEPDCL & NDRF 10th Battalion).
+    </p>
+
+    <!-- Navigation Pills -->
+    <div class="flex flex-wrap items-center justify-center gap-2 mt-6">
+      <button onclick="switchTab('simulator')" id="btn-tab-simulator" class="px-4 py-2 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-lg shadow-emerald-600/30">
+        📱 Live UI Prototype Simulator
+      </button>
+      <button onclick="switchTab('concept')" id="btn-tab-concept" class="px-4 py-2 rounded-xl text-xs font-bold transition-all bg-slate-900 border border-slate-800 text-slate-300 hover:text-white">
+        💡 Core Thesis & Problem Statement
+      </button>
+      <button onclick="switchTab('architecture')" id="btn-tab-architecture" class="px-4 py-2 rounded-xl text-xs font-bold transition-all bg-slate-900 border border-slate-800 text-slate-300 hover:text-white">
+        🏗️ System Architecture & Tech Stack
+      </button>
+      <button onclick="switchTab('roles')" id="btn-tab-roles" class="px-4 py-2 rounded-xl text-xs font-bold transition-all bg-slate-900 border border-slate-800 text-slate-300 hover:text-white">
+        👥 3-Sided Role Ecosystem
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto">
+
+    <!-- ==================== TAB 1: LIVE SIMULATOR ==================== -->
+    <section id="tab-simulator" class="space-y-6">
+      
+      <!-- Interactive Controls Panel -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider">Dual-Mode Control Switch</h3>
+          <p class="text-xs text-slate-400">Toggle between Normal Municipal Days and Cyclone Crisis Mode to watch the UI adapt.</p>
+        </div>
+        <div class="flex items-center gap-3 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+          <button id="toggle-civic" onclick="setMode('civic')" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white shadow">
+            🔵 Normal Civic Mode
+          </button>
+          <button id="toggle-disaster" onclick="setMode('disaster')" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">
+            🔴 Disaster Emergency Mode
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Prototype Frame -->
+      <div id="prototype-container" class="transition-all duration-500 rounded-3xl border-2 border-slate-800 bg-slate-950 p-4 md:p-8 shadow-2xl relative overflow-hidden">
+        
+        <!-- App Top Bar Inside Simulator -->
+        <div id="sim-navbar" class="rounded-2xl p-4 transition-colors duration-500 flex items-center justify-between bg-slate-900/90 border border-slate-800 mb-6">
+          <div class="flex items-center gap-3">
+            <div id="sim-logo-badge" class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg bg-emerald-600 text-white shadow">
+              🛡️
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-extrabold text-base tracking-tight text-white">JanRakshak</span>
+                <span id="sim-mode-pill" class="text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Civic Mode Active
+                </span>
+              </div>
+              <span id="sim-sub-text" class="text-xs text-slate-400">Greater Visakhapatnam Municipal Corporation (GVMC)</span>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <button onclick="toggleOnboardingModal()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5">
+              <span>👤</span>
+              <span id="sim-user-label">Citizen Account (OTP)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ---------------- CIVIC VIEW CONTENT ---------------- -->
+        <div id="civic-content" class="space-y-6">
+          <!-- Top Metric Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-900/70 border border-slate-800/80 p-4 rounded-2xl">
+              <div class="text-slate-400 text-xs font-semibold">Strict Resolution SLA</div>
+              <div class="text-2xl font-black text-emerald-400 mt-1">48 Hours</div>
+              <div class="text-xs text-slate-400 mt-1">Countdown starts on citizen submission</div>
+            </div>
+            <div class="bg-slate-900/70 border border-slate-800/80 p-4 rounded-2xl">
+              <div class="text-slate-400 text-xs font-semibold">PostGIS Deduplication</div>
+              <div class="text-2xl font-black text-blue-400 mt-1">50m Radar</div>
+              <div class="text-xs text-slate-400 mt-1">Clusters duplicate pothole & drainage calls</div>
+            </div>
+            <div class="bg-slate-900/70 border border-slate-800/80 p-4 rounded-2xl">
+              <div class="text-slate-400 text-xs font-semibold">Active Ward Infrastructure</div>
+              <div class="text-2xl font-black text-amber-400 mt-1">Ward 14 & 18</div>
+              <div class="text-xs text-slate-400 mt-1">Madhurawada Coastal & Beach Road Corridors</div>
+            </div>
+          </div>
+
+          <!-- Interactive Action: Report Defect & Test Spatial Deduplication -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <h4 class="text-base font-bold text-white">Interactive Civic Demonstration: 50m Deduplication Radar</h4>
+                <p class="text-xs text-slate-400">Click below to simulate filing a grievance near an existing hazard.</p>
+              </div>
+              <button onclick="simulateDeduplication()" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow flex items-center gap-2">
+                <span>📍</span> Test 50m Deduplication Spike
+              </button>
+            </div>
+
+            <!-- Deduplication Notice Box (Dynamic) -->
+            <div id="dedup-box" class="hidden p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs space-y-1">
+              <div class="font-bold text-amber-400 flex items-center gap-1.5">
+                <span>⚡</span> Spatial Deduplication Clustered into #TKT-1042!
+              </div>
+              <p>Your report at Beach Road matched an existing verified crater within 18.4 meters. Instead of creating duplicate triage work for GVMC engineers, your report scaled severity to <strong>CRITICAL</strong> and added your mobile number to priority SMS progress alerts.</p>
+            </div>
+
+            <!-- Ticket List -->
+            <div class="mt-4 space-y-3">
+              <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-blue-400">#TKT-1042</span>
+                    <span class="text-[11px] px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-800 font-semibold">Pothole & Craters</span>
+                    <span id="ticket-support-counter" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">4 Citizens Merged</span>
+                  </div>
+                  <div class="text-sm font-semibold text-slate-200 mt-1">Deep 1.5m Crater near RTC Complex Exit Road</div>
+                  <div class="text-xs text-slate-400">Dwarka Nagar, Ward 14 · Assigned Crew: K. Satyanarayana</div>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">In Progress</span>
+                </div>
+              </div>
+
+              <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-blue-400">#TKT-1039</span>
+                    <span class="text-[11px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-semibold">Drainage Block</span>
+                    <span class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">2 Citizens Merged</span>
+                  </div>
+                  <div class="text-sm font-semibold text-slate-200 mt-1">Stormwater overflow choking Pedda Waltair culvert</div>
+                  <div class="text-xs text-slate-400">Pedda Waltair Main Junction, Ward 18 · Assigned Crew: P. Appala Naidu</div>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30">Crew Dispatched</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------------- DISASTER VIEW CONTENT ---------------- -->
+        <div id="disaster-content" class="hidden space-y-6">
+          
+          <!-- Red Alert Headline -->
+          <div class="bg-red-950/80 border-2 border-red-600/80 p-5 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl animate-bounce">⚠️</span>
+              <div>
+                <h4 class="text-base font-black text-white tracking-wide uppercase">Stage 4 Cyclone Protocol Activated</h4>
+                <p class="text-xs text-red-200">Collector Executive Emergency Order enacted for Visakhapatnam Urban & Coastal Belt.</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 text-xs font-mono">
+              <div class="bg-red-900/60 px-3 py-1.5 rounded-lg border border-red-700 text-red-100">💨 124 km/h Gusts</div>
+              <div class="bg-red-900/60 px-3 py-1.5 rounded-lg border border-red-700 text-red-100">🌊 +3.8m Storm Surge</div>
+            </div>
+          </div>
+
+          <!-- Primary SOS Panic Trigger -->
+          <div class="bg-gradient-to-r from-red-900 via-rose-950 to-red-950 border border-red-600/60 p-6 rounded-3xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <span class="text-xs font-extrabold uppercase px-2.5 py-1 rounded-md bg-red-600 text-white">Life-Safety Priority</span>
+              <h3 class="text-xl md:text-2xl font-black text-white mt-2">1-Tap Emergency Elder & Citizen SOS</h3>
+              <p class="text-xs md:text-sm text-red-200 mt-1 max-w-xl">
+                Broadcasts precise GPS coordinates, battery level, medical history, and mobility restrictions directly to NDRF 10th Battalion and verified volunteers within 500 meters.
+              </p>
+            </div>
+            <button onclick="triggerSosCountdown()" class="px-8 py-5 rounded-2xl font-black text-sm uppercase tracking-wider bg-red-600 hover:bg-red-500 text-white shadow-2xl shadow-red-600/60 transition-transform active:scale-95 shrink-0 flex items-center gap-3">
+              <span class="text-2xl animate-pulse">🚨</span>
+              <span>Trigger SOS Broadcast</span>
+            </button>
+          </div>
+
+          <!-- 2x2 Emergency Disaster Helplines Grid -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-bold text-white uppercase tracking-wider">2×2 Direct Emergency Helpline Grid</h4>
+              <span class="text-xs text-slate-400">Click any card to automate real-time call dispatch</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <!-- Card 1: NDRF -->
+              <div onclick="openCallModal('NDRF Disaster Rescue Command', '1078', '10th Battalion Motorized Boats & Cutters', 'Commandant R. S. Pathak')" class="cursor-pointer bg-slate-900/90 hover:bg-slate-900 border border-red-800/50 hover:border-red-500 p-4 rounded-2xl transition-all shadow-md group">
+                <div class="flex items-start justify-between">
+                  <div class="w-10 h-10 rounded-xl bg-red-600/20 text-red-400 flex items-center justify-center font-bold text-lg">
+                    🚤
+                  </div>
+                  <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-red-600 text-white">URGENT RESCUE</span>
+                </div>
+                <div class="text-sm font-bold text-white mt-3 group-hover:text-red-400 transition-colors">NDRF Disaster Rescue Command</div>
+                <div class="text-xs text-slate-400 mt-1">Inundation evacuation, motorized dinghy teams, tree clearance</div>
+                <div class="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-bold text-red-400">
+                  <span>Toll-Free: 1078</span>
+                  <span class="group-hover:translate-x-1 transition-transform">Automate Call →</span>
+                </div>
+              </div>
+
+              <!-- Card 2: Coastal Marine Police -->
+              <div onclick="openCallModal('Coastal Marine Police & Coast Guard', '1093', 'Harbor Defense & Tidal Surge Evacuation', 'DSP Coastal Security Wing')" class="cursor-pointer bg-slate-900/90 hover:bg-slate-900 border border-blue-800/50 hover:border-blue-500 p-4 rounded-2xl transition-all shadow-md group">
+                <div class="flex items-start justify-between">
+                  <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-lg">
+                    ⚓
+                  </div>
+                  <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-600 text-white">COASTAL PATROL</span>
+                </div>
+                <div class="text-sm font-bold text-white mt-3 group-hover:text-blue-400 transition-colors">Coastal Marine Police & Coast Guard</div>
+                <div class="text-xs text-slate-400 mt-1">Fishermen rescue, beach tidal surge control, port protection</div>
+                <div class="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-bold text-blue-400">
+                  <span>Direct: 1093</span>
+                  <span class="group-hover:translate-x-1 transition-transform">Automate Call →</span>
+                </div>
+              </div>
+
+              <!-- Card 3: State Ops -->
+              <div onclick="openCallModal('AP State Emergency Operation Center', '1070', 'Andhra Pradesh State Disaster Management (APSDMA)', 'State Relief Commissioner')" class="cursor-pointer bg-slate-900/90 hover:bg-slate-900 border border-amber-800/50 hover:border-amber-500 p-4 rounded-2xl transition-all shadow-md group">
+                <div class="flex items-start justify-between">
+                  <div class="w-10 h-10 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center font-bold text-lg">
+                    📢
+                  </div>
+                  <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-600 text-black">GOVT WAR ROOM</span>
+                </div>
+                <div class="text-sm font-bold text-white mt-3 group-hover:text-amber-400 transition-colors">State Disaster Operations Center</div>
+                <div class="text-xs text-slate-400 mt-1">APSDMA high-level district resource mobilization & food supply</div>
+                <div class="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-bold text-amber-400">
+                  <span>Helpline: 1070</span>
+                  <span class="group-hover:translate-x-1 transition-transform">Automate Call →</span>
+                </div>
+              </div>
+
+              <!-- Card 4: GVMC Flood Desk -->
+              <div onclick="openCallModal('GVMC Disaster & Flood Control Desk', '1800-425-0001', 'Municipal Stormwater Inundation Control', 'Municipal Commissioner Desk')" class="cursor-pointer bg-slate-900/90 hover:bg-slate-900 border border-teal-800/50 hover:border-teal-500 p-4 rounded-2xl transition-all shadow-md group">
+                <div class="flex items-start justify-between">
+                  <div class="w-10 h-10 rounded-xl bg-teal-600/20 text-teal-400 flex items-center justify-center font-bold text-lg">
+                    🏢
+                  </div>
+                  <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-teal-600 text-white">TOLL FREE 24/7</span>
+                </div>
+                <div class="text-sm font-bold text-white mt-3 group-hover:text-teal-400 transition-colors">GVMC Flood & Inundation Desk</div>
+                <div class="text-xs text-slate-400 mt-1">Urban culvert dewatering, emergency tankers, shelter bed allocation</div>
+                <div class="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-bold text-teal-400">
+                  <span>1800-425-0001</span>
+                  <span class="group-hover:translate-x-1 transition-transform">Automate Call →</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Interactive Safe Evacuation Route Map -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="text-sm font-bold text-white uppercase tracking-wider">AI Safe Evacuation Corridor Map</h4>
+                <p class="text-xs text-slate-400">Live GPS routing avoiding flooded Beach Road & fallen 11kV cables.</p>
+              </div>
+              <button onclick="recalculateRoute()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow">
+                <span>🔄</span> Recalculate Live Path
+              </button>
+            </div>
+
+            <!-- Simulated Vector Map -->
+            <div class="relative w-full h-64 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex items-center justify-center p-4">
+              <!-- Background grid -->
+              <div class="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px] opacity-20"></div>
+
+              <!-- Route SVG Graphic -->
+              <svg class="w-full h-full" viewBox="0 0 600 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Flooded Coastal Danger Zone -->
+                <path d="M 50 170 Q 250 190 550 170 L 550 210 L 50 210 Z" fill="#ef4444" fill-opacity="0.15" stroke="#ef4444" stroke-dasharray="4 4" />
+                <text x="240" y="200" fill="#f87171" font-size="11" font-weight="bold">⚠️ Inundated Beach Road (&gt;3.5 ft water)</text>
+
+                <!-- Hazard Point 1 -->
+                <circle cx="210" cy="165" r="9" fill="#ef4444" />
+                <text x="225" y="170" fill="#fca5a5" font-size="11" font-weight="bold">Live 11kV Wire</text>
+
+                <!-- Safe Detour Route (Elevated Inland Ridge) -->
+                <path id="evac-route-path" d="M 70 150 C 130 90, 240 50, 360 60 C 440 65, 490 90, 520 110" stroke="#10b981" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 6" />
+
+                <!-- Citizen Origin Marker -->
+                <circle cx="70" cy="150" r="10" fill="#3b82f6" />
+                <circle cx="70" cy="150" r="18" stroke="#60a5fa" stroke-width="2" class="animate-ping" opacity="0.5" />
+                <text x="40" y="130" fill="#93c5fd" font-size="12" font-weight="bold">Citizen Location (GPS)</text>
+
+                <!-- Shelter Destination Marker -->
+                <circle cx="520" cy="110" r="12" fill="#10b981" />
+                <text x="460" y="145" fill="#6ee7b7" font-size="12" font-weight="bold">GVMC Indoor Stadium Hub</text>
+              </svg>
+
+              <!-- Map Overlay Stat Card -->
+              <div class="absolute bottom-3 left-3 bg-slate-900/90 border border-emerald-500/50 p-2.5 rounded-xl text-xs flex items-center gap-3">
+                <span class="text-emerald-400 font-bold">✓ Elevated Inland Detour:</span>
+                <span class="text-slate-300">3.2 km · 12 mins · Clear of coastal surge</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: CORE THESIS ==================== -->
+    <section id="tab-concept" class="hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl space-y-6">
+        <div>
+          <h2 class="text-2xl md:text-3xl font-black text-white">Why JanRakshak? The GovTech Paradigm Shift</h2>
+          <p class="text-slate-400 text-sm mt-2">Solving the fundamental paradox of disaster management applications.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="p-6 rounded-2xl bg-red-950/20 border border-red-800/40">
+            <div class="text-red-400 font-bold text-base flex items-center gap-2">
+              <span>❌</span> The Conventional Siloed System
+            </div>
+            <ul class="mt-4 space-y-3 text-xs md:text-sm text-slate-300">
+              <li>• Municipal apps (potholes, garbage) and disaster helplines operate in completely isolated systems.</li>
+              <li>• When a tropical cyclone strikes, <strong>98% of citizens have never downloaded the emergency app</strong>.</li>
+              <li>• Emergency hotlines get paralyzed by <strong>thousands of duplicate calls</strong> for the same fallen banyan tree or flooded culvert.</li>
+              <li>• Trapped bedridden elders with oxygen concentrators have no channel to signal neighborhood rescue boats.</li>
+            </ul>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-emerald-950/20 border border-emerald-800/40">
+            <div class="text-emerald-400 font-bold text-base flex items-center gap-2">
+              <span>✅</span> The JanRakshak Unified Dual-Mode
+            </div>
+            <ul class="mt-4 space-y-3 text-xs md:text-sm text-slate-300">
+              <li>• <strong>100% Pre-Crisis Adoption</strong>: Citizens use JanRakshak year-round for everyday civic grievances.</li>
+              <li>• <strong>Autonomic State Transformation</strong>: With one master Collector switch, all citizen apps switch into high-contrast crisis mode.</li>
+              <li>• <strong>50m PostGIS Deduplication</strong>: Clusters duplicate complaints, scales priority, and stops dispatch paralysis.</li>
+              <li>• <strong>Targeted Vulnerability Mesh</strong>: Elder medical needs are pinned to pre-registered, verified volunteers within 500m.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: ARCHITECTURE ==================== -->
+    <section id="tab-architecture" class="hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl space-y-8">
+        <div>
+          <h2 class="text-2xl md:text-3xl font-black text-white">Enterprise Full-Stack Architecture</h2>
+          <p class="text-slate-400 text-sm mt-2">FastAPI + PostGIS spatial engine + React Vite PWA + Flutter native mobile app.</p>
+        </div>
+
+        <!-- Tech Badges -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
+            <div class="text-emerald-400 font-black text-lg">FastAPI</div>
+            <div class="text-xs text-slate-400 mt-1">Python 3.12 REST Backend</div>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
+            <div class="text-blue-400 font-black text-lg">PostGIS 3.4</div>
+            <div class="text-xs text-slate-400 mt-1">Spatial Deduplication & GIS</div>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
+            <div class="text-cyan-400 font-black text-lg">React 19 & Vite</div>
+            <div class="text-xs text-slate-400 mt-1">Tailwind CSS 4 Responsive Web</div>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
+            <div class="text-purple-400 font-black text-lg">Flutter 3.47+</div>
+            <div class="text-xs text-slate-400 mt-1">Offline-First Mobile APK</div>
+          </div>
+        </div>
+
+        <!-- End-to-End Pipeline Card -->
+        <div class="p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+          <h4 class="text-sm font-bold text-white">Automated CI/CD Integration (GitHub Actions & Codemagic)</h4>
+          <p class="text-xs text-slate-400">
+            Every commit to <code class="text-emerald-400">main</code> runs strict verification across all 3 tiers:
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <span class="text-emerald-400 font-bold">1. Backend CI:</span><br>
+              Runs 18 pytest tests verifying spatial point-in-polygon & deduplication algorithms.
+            </div>
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <span class="text-blue-400 font-bold">2. Frontend CI:</span><br>
+              Strict TypeScript compiler (<code class="text-slate-300">tsc --noEmit</code>) + 7 unit tests + Vite production build.
+            </div>
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+              <span class="text-purple-400 font-bold">3. Mobile CI:</span><br>
+              Flutter analyzer, widget smoke test, and automated release APK compilation & artifact upload.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: ROLES ==================== -->
+    <section id="tab-roles" class="hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl space-y-6">
+        <div>
+          <h2 class="text-2xl md:text-3xl font-black text-white">Three-Sided Role Ecosystem</h2>
+          <p class="text-slate-400 text-sm mt-2">Tailored workflows with strict Role-Based Access Control (RBAC).</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+            <div>
+              <div class="text-2xl mb-2">👤</div>
+              <h4 class="text-base font-bold text-white">Citizen Portal</h4>
+              <p class="text-xs text-slate-400 mt-2">
+                1-tap Aadhaar/OTP onboarding, geotagged photo reporting, 48h SLA transparency clock, emergency SOS panic trigger, and real-time shelter bed capacity.
+              </p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-emerald-400 font-semibold">
+              Public Field Access
+            </div>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+            <div>
+              <div class="text-2xl mb-2">👷</div>
+              <h4 class="text-base font-bold text-white">GVMC Works Console</h4>
+              <p class="text-xs text-slate-400 mt-2">
+                For municipal field engineers and APEPDCL linemen. Workload balancing, geotagged before-and-after photo repair audits, and automated completion verification.
+              </p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-blue-400 font-semibold">
+              Municipal Staff Access
+            </div>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+            <div>
+              <div class="text-2xl mb-2">🎖️</div>
+              <h4 class="text-base font-bold text-white">NDRF War Room Desk</h4>
+              <p class="text-xs text-slate-400 mt-2">
+                Executive crisis command. Live GPS boat telemetry, elder critical distress queue, multi-channel broadcast engine, and civilian volunteer corps deployment.
+              </p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-red-400 font-semibold">
+              Emergency Command Access
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== INTERACTIVE MODALS ==================== -->
+  
+  <!-- 1. Simulated Phone Call Dialog -->
+  <div id="modal-call" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border-2 border-red-600 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl relative">
+      <div class="w-16 h-16 rounded-full bg-red-600/20 text-red-400 text-3xl flex items-center justify-center mx-auto mb-4 animate-bounce">
+        📞
+      </div>
+      <h3 id="call-title" class="text-lg font-black text-white">NDRF Rescue Command</h3>
+      <p id="call-dept" class="text-xs text-slate-400 mt-1">10th Battalion Motorized Boat Control</p>
+      
+      <div class="my-4 py-2 px-4 rounded-xl bg-slate-950 border border-slate-800 inline-block">
+        <span id="call-status" class="text-xs font-mono font-bold text-emerald-400">CONNECTING...</span>
+      </div>
+
+      <div class="text-xs text-amber-300 font-semibold" id="call-officer">Officer: Commandant R. S. Pathak</div>
+      <div class="text-xs text-slate-400 mt-1" id="call-number">Dialing 1078 (Toll Free)...</div>
+
+      <div class="mt-6 flex items-center justify-center gap-3">
+        <button onclick="closeCallModal()" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-500 text-white w-full">
+          End Call
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Onboarding OTP Modal -->
+  <div id="modal-onboarding" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span>🛡️</span> Citizen Aadhaar Onboarding
+        </h3>
+        <button onclick="toggleOnboardingModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <!-- Simulated SMS Banner -->
+      <div id="simulated-sms" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-200 text-xs">
+        <div class="font-bold text-amber-400 flex items-center justify-between">
+          <span>📲 Incoming SMS (Simulated)</span>
+          <button onclick="autoFillOtp()" class="px-2 py-0.5 rounded bg-amber-400 text-black font-bold text-[10px]">Auto-Fill</button>
+        </div>
+        <div id="sms-text" class="mt-1">Govt of AP: Your JanRakshak verification OTP is 482910.</div>
+      </div>
+
+      <div id="onboarding-step-1" class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-400">Full Name</label>
+          <input type="text" id="ob-name" value="Chukka Satya Teja" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white mt-1">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">10-Digit Mobile Number</label>
+          <input type="text" id="ob-phone" value="9848012345" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white mt-1">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">12-Digit Aadhaar Number</label>
+          <input type="text" id="ob-aadhaar" value="5492 8190 3482" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white mt-1">
+        </div>
+        <button onclick="sendOtpStep()" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs mt-2">
+          Send SMS Verification OTP
+        </button>
+      </div>
+
+      <div id="onboarding-step-2" class="hidden space-y-3">
+        <div class="text-center">
+          <div class="text-xs text-slate-400">Enter the 6-digit OTP code</div>
+          <input type="text" id="ob-otp" maxlength="6" class="w-40 mx-auto text-center tracking-widest text-lg font-bold bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-2">
+        </div>
+        <button onclick="verifyOtpStep()" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">
+          Verify & Save Citizen Profile
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. SOS Countdown Modal -->
+  <div id="modal-sos" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-red-950 border-2 border-red-600 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl relative space-y-4">
+      <div class="text-4xl animate-bounce">🚨</div>
+      <h3 class="text-xl font-black text-white">EMERGENCY SOS BROADCAST</h3>
+      <p class="text-xs text-red-200">Dispatching live coordinates and medical profile to NDRF War Room in:</p>
+      
+      <div class="w-20 h-20 rounded-full border-4 border-red-500 bg-red-900/60 flex items-center justify-center mx-auto text-3xl font-black text-white" id="sos-countdown-num">
+        5
+      </div>
+
+      <p class="text-[11px] text-red-300">Tap Cancel if pressed by mistake.</p>
+
+      <button onclick="cancelSosCountdown()" class="w-full py-3 rounded-xl bg-white hover:bg-slate-200 text-red-950 font-black text-xs uppercase">
+        Cancel SOS (False Alarm)
+      </button>
+    </div>
+  </div>
+
+  <!-- JavaScript Functionality -->
+  <script>
+    let currentMode = 'civic';
+    let otpCode = '482910';
+    let callInterval = null;
+    let sosInterval = null;
+    let dedupCount = 4;
+
+    function setMode(mode) {
+      currentMode = mode;
+      const civicContent = document.getElementById('civic-content');
+      const disasterContent = document.getElementById('disaster-content');
+      const container = document.getElementById('prototype-container');
+      const simNavbar = document.getElementById('sim-navbar');
+      const modePill = document.getElementById('sim-mode-pill');
+      const logoBadge = document.getElementById('sim-logo-badge');
+      const btnCivic = document.getElementById('toggle-civic');
+      const btnDisaster = document.getElementById('toggle-disaster');
+
+      if (mode === 'disaster') {
+        civicContent.classList.add('hidden');
+        disasterContent.classList.remove('hidden');
+        container.classList.add('border-red-600', 'bg-gradient-to-b', 'from-red-950/40', 'to-slate-950');
+        container.classList.remove('border-slate-800');
+        simNavbar.classList.add('bg-red-950/70', 'border-red-900/80');
+        simNavbar.classList.remove('bg-slate-900/90', 'border-slate-800');
+        modePill.className = 'text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-red-600/30 text-red-400 border border-red-500/50';
+        modePill.innerText = 'DISASTER EMERGENCY ACTIVE';
+        logoBadge.className = 'w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg bg-red-600 text-white shadow shadow-red-600/40';
+        btnDisaster.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-red-600 text-white shadow';
+        btnCivic.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white';
+      } else {
+        disasterContent.classList.add('hidden');
+        civicContent.classList.remove('hidden');
+        container.classList.remove('border-red-600', 'bg-gradient-to-b', 'from-red-950/40', 'to-slate-950');
+        container.classList.add('border-slate-800');
+        simNavbar.classList.remove('bg-red-950/70', 'border-red-900/80');
+        simNavbar.classList.add('bg-slate-900/90', 'border-slate-800');
+        modePill.className = 'text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        modePill.innerText = 'CIVIC MODE ACTIVE';
+        logoBadge.className = 'w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg bg-emerald-600 text-white shadow';
+        btnCivic.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white shadow';
+        btnDisaster.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white';
+      }
+    }
+
+    function switchTab(tabId) {
+      const tabs = ['simulator', 'concept', 'architecture', 'roles'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`btn-tab-${t}`);
+        btn.className = 'px-4 py-2 rounded-xl text-xs font-bold transition-all bg-slate-900 border border-slate-800 text-slate-300 hover:text-white';
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`btn-tab-${tabId}`);
+      activeBtn.className = 'px-4 py-2 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-lg shadow-emerald-600/30';
+    }
+
+    function simulateDeduplication() {
+      const box = document.getElementById('dedup-box');
+      box.classList.remove('hidden');
+      dedupCount++;
+      document.getElementById('ticket-support-counter').innerText = `${dedupCount} Citizens Merged`;
+    }
+
+    // Modal Phone Call
+    function openCallModal(title, number, dept, officer) {
+      document.getElementById('call-title').innerText = title;
+      document.getElementById('call-dept').innerText = dept;
+      document.getElementById('call-officer').innerText = 'Officer: ' + officer;
+      document.getElementById('call-number').innerText = 'Dialing ' + number + '...';
+      document.getElementById('call-status').innerText = 'CONNECTING...';
+      document.getElementById('modal-call').classList.remove('hidden');
+
+      let secs = 0;
+      clearInterval(callInterval);
+      setTimeout(() => {
+        document.getElementById('call-status').innerText = 'LIVE CALL • 00:00';
+        callInterval = setInterval(() => {
+          secs++;
+          const mins = Math.floor(secs / 60).toString().padLeft(2, '0');
+          const s = (secs % 60).toString().padLeft(2, '0');
+          document.getElementById('call-status').innerText = `LIVE CALL • ${mins}:${s}`;
+        }, 1000);
+      }, 1200);
+    }
+
+    function closeCallModal() {
+      clearInterval(callInterval);
+      document.getElementById('modal-call').classList.add('hidden');
+    }
+
+    // Modal Onboarding
+    function toggleOnboardingModal() {
+      const m = document.getElementById('modal-onboarding');
+      m.classList.toggle('hidden');
+    }
+
+    function sendOtpStep() {
+      otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      document.getElementById('sms-text').innerText = `Govt of AP (GVMC-SMS): Your JanRakshak verification OTP is ${otpCode}. Valid for 10 mins.`;
+      document.getElementById('simulated-sms').classList.remove('hidden');
+      document.getElementById('onboarding-step-1').classList.add('hidden');
+      document.getElementById('onboarding-step-2').classList.remove('hidden');
+    }
+
+    function autoFillOtp() {
+      document.getElementById('ob-otp').value = otpCode;
+    }
+
+    function verifyOtpStep() {
+      const entered = document.getElementById('ob-otp').value;
+      if (entered === otpCode || entered === '123456') {
+        const name = document.getElementById('ob-name').value;
+        document.getElementById('sim-user-label').innerText = `${name} (Verified)`;
+        toggleOnboardingModal();
+        alert('✅ Aadhaar OTP Verified! Welcome, ' + name);
+      } else {
+        alert('Invalid OTP. Please check the simulated SMS banner.');
+      }
+    }
+
+    // SOS Trigger Countdown
+    function triggerSosCountdown() {
+      const modal = document.getElementById('modal-sos');
+      modal.classList.remove('hidden');
+      let count = 5;
+      const numElem = document.getElementById('sos-countdown-num');
+      numElem.innerText = count;
+
+      clearInterval(sosInterval);
+      sosInterval = setInterval(() => {
+        count--;
+        numElem.innerText = count;
+        if (count <= 0) {
+          clearInterval(sosInterval);
+          modal.classList.add('hidden');
+          alert('🚨 SOS TELEMETRY DISPATCHED!\nYour GPS coordinates, battery level, and medical details have been locked into the NDRF 10th Battalion War Room Queue.');
+        }
+      }, 1000);
+    }
+
+    function cancelSosCountdown() {
+      clearInterval(sosInterval);
+      document.getElementById('modal-sos').classList.add('hidden');
+    }
+
+    function recalculateRoute() {
+      const path = document.getElementById('evac-route-path');
+      path.setAttribute('stroke', '#38bdf8');
+      setTimeout(() => {
+        path.setAttribute('stroke', '#10b981');
+      }, 800);
+    }
+  </script>
+</body>
+</html>
